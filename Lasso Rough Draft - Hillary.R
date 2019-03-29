@@ -3,6 +3,7 @@
 library(stats4)
 
 # Set-up: Need to define/create y, X, lambda (penalization parameters)
+# Assumption: X includes intercept column (all 1s)
 
 penal = function(y, X, lam, B, family = "binomial"){
   if(!is.element(family, c("binomial","binom"))){
@@ -30,10 +31,10 @@ penal = function(y, X, lam, B, family = "binomial"){
       W = diag(p(1-p)) # Make weights into diagonal matrix
       # y_wr = (y - p) / (p (1-p)) + X %*% B # Working response
       res = solve(W)(y - p) # residuals based on current values
-      v_j = (1/n) * t(X[,j]) %*% W %*% X[,j]
-      z_j = (1/n) * t(X[,j]) %*% W %*% res + v_j * B[j]
+      v_j = (1/nrow(X)) * t(X[,j]) %*% W %*% X[,j]
+      z_j = (1/nrow(X)) * t(X[,j]) %*% W %*% res + v_j * B[j]
       # Alternatively:
-      ## z_j = (1/n) * t(X[,j]) %*% W %*% (y_wr - X[,-j] %*% B[-j])
+      ## z_j = (1/nrow(X)) * t(X[,j]) %*% W %*% (y_wr - X[,-j] %*% B[-j])
       
       # To add:
         ## If iter != 0, don't re-calculated B[j] if last B[j] = 0
@@ -59,9 +60,9 @@ penal = function(y, X, lam, B, family = "binomial"){
   } 
   
   # Evaluate BIC for resulting model
-  # From library(stats4): BIC function
+  # From library(stats4): BIC function OR
   # BIC = -2 (log-lik) + n_param * log(n_obs)
-  p_vec = exp(X%*%B)/(1+exp(X%*%B)
+  p_vec = exp(X%*%B)/(1+exp(X%*%B))
   BIC = -2 * sum( y * log(p_vec) + (1-y) * log(1-p_vec) ) + ncol(X) * log(nrow(X))
   
   # Return updated B and BIC criteria for each lambda
@@ -70,7 +71,15 @@ penal = function(y, X, lam, B, family = "binomial"){
 }
 
 # Find lambda_max and lambda_min
-lam = seq(from = lambda_max, to = lambda_min, by = -0.01)
+lam_option = numeric(ncol(X))
+for(j in 1:ncol(X)){
+  lam_option[j] = (1/nrow(X)) * abs(t(X[,j]) %*% y)
+}
+lambda_max = max(lam_option)
+epsilon = 0.001
+lambda_min = lambda_max * epsilon
+# Recommendation by 761 notes: perform sequence on log scale
+log_lam = seq(from = log(lambda_max), to = log(lambda_min), by = -0.01)
 # For lambda_max, set initial value of B = vector of 0s
 B = numeric(ncol(X))
 results = list()
