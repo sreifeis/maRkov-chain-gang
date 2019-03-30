@@ -5,15 +5,15 @@ library(stats4)
 # Set-up: Need to define/create y, X, lambda (penalization parameters)
 # Assumption: X includes intercept column (all 1s)
 
-calc = function(y, X, B, j){
+calc = function(y, X, B, lam, j){
   # Calculates updated B[j], used in "penal" function below
   
   # Define working response, weights, and current-iteration residuals
   eta = X %*% B # Linear predictor in terms of current values of B
-  p = exp(eta) / (1 + eta) # pi for current values, used in weights and working reponse
-  W = diag(p(1-p)) # Make weights into diagonal matrix
+  p = exp(eta) / (1 + exp(eta)) # pi for current values, used in weights and working reponse
+  W = diag(as.numeric(p*(1-p))) # Make weights into diagonal matrix
   # y_wr = (y - p) / (p (1-p)) + X %*% B # Working response
-  res = solve(W)(y - p) # residuals based on current values
+  res = solve(W) %*% (y - p) # residuals based on current values
   v_j = (1/nrow(X)) * t(X[,j]) %*% W %*% X[,j]
   z_j = (1/nrow(X)) * t(X[,j]) %*% W %*% res + v_j * B[j]
   # Alternatively:
@@ -21,14 +21,14 @@ calc = function(y, X, B, j){
   
   # Use above values to solve for next iteration value of Bj
   if(z_j > 0 & lam < abs(z_j)){
-    B[j] = (z_j - lam) / v_j
+    b_j = (z_j - lam) / v_j
   }else if(z_j < 0 & lam < abs(z_j)){
-    B[j] = (z_j + lam) / v_j
+    b_j = (z_j + lam) / v_j
   }else{
-    B[j] = 0
+    b_j = 0
   }
   
-  return(B[j])
+  return(b_j)
 }
 
 penal = function(y, X, lam, B, family = "binomial"){
@@ -53,16 +53,18 @@ penal = function(y, X, lam, B, family = "binomial"){
     for(j in 1:ncol(X)){
       
       if(iter == 0){ # Update all B[j]
-        B[j] = calc(y, X, B, j)
+        b_j = calc(y, X, B, lam, j)
         
       }else{ # Only update non-zero B[j] after first round
         
         if(B[j] != 0){
-          B[j] = calc(y, X, B, j)
+          b_j = calc(y, X, B, lam, j)
+        }else{
+          b_j = 0
         }
         
       }
-      
+      B[j] = b_j
     }
     
     # Evaluate convergence criteria - Euclidean distance
@@ -77,7 +79,7 @@ penal = function(y, X, lam, B, family = "binomial"){
   # Evaluate BIC for resulting model
   # From library(stats4): BIC function OR
   # BIC = -2 (log-lik) + n_param * log(n_obs)
-  p_vec = exp(X%*%B)/(1+exp(X%*%B))
+  p_vec = exp(X %*% B)/(1+exp(X %*% B))
   BIC = -2 * sum( y * log(p_vec) + (1-y) * log(1-p_vec) ) + ncol(X) * log(nrow(X))
   
   # Return updated B and BIC criteria for each lambda

@@ -33,12 +33,12 @@ log_lam = seq(from = log(lambda_max), to = log(lambda_min), by = -0.01)
 
 # For lambda_max, B = 0 for all j
 # For subsequent lambda, use previous B as initial values
-B = matrix(0, nrow = ncol(X), ncol = 0)
+B = numeric(length = ncol(X))
 results = list()
 
 for(l in 2:length(log_lam)){
-  lam = exp(log_lam)
-  results[[l]] = penal(y, X, lam[l], B, family = "binomial") 
+  lambda = exp(log_lam)
+  results[[l]] = penal(y, X, lambda[l], B, family = "binomial") 
   B = results$B_new
   
 }
