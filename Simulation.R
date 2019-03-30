@@ -25,7 +25,7 @@ epsilon = 0.001
 lambda_min = lambda_max * epsilon
 
 # Recommendation by 761 notes: perform sequence on log scale
-log_lam = seq(from = log(lambda_max), to = log(lambda_min), by = -0.01)
+log_lam = seq(from = log(lambda_max), to = log(lambda_min), by = -0.05)
 
 ###################################################
 
@@ -35,10 +35,11 @@ log_lam = seq(from = log(lambda_max), to = log(lambda_min), by = -0.01)
 # For subsequent lambda, use previous B as initial values
 B = numeric(length = ncol(X))
 results = list()
+lambda = exp(log_lam)
 
-for(l in 2:length(log_lam)){
-  lambda = exp(log_lam)
+for(l in 2:length(lambda)){
   results[[l]] = penal(y, X, lambda[l], B, family = "binomial") 
-  B = results$B_new
+  B = results[[l]]$B_new
   
 }
+
