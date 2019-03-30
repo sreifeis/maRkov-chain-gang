@@ -5,6 +5,32 @@ library(stats4)
 # Set-up: Need to define/create y, X, lambda (penalization parameters)
 # Assumption: X includes intercept column (all 1s)
 
+calc = function(y, X, B, j){
+  # Calculates updated B[j], used in "penal" function below
+  
+  # Define working response, weights, and current-iteration residuals
+  eta = X %*% B # Linear predictor in terms of current values of B
+  p = exp(eta) / (1 + eta) # pi for current values, used in weights and working reponse
+  W = diag(p(1-p)) # Make weights into diagonal matrix
+  # y_wr = (y - p) / (p (1-p)) + X %*% B # Working response
+  res = solve(W)(y - p) # residuals based on current values
+  v_j = (1/nrow(X)) * t(X[,j]) %*% W %*% X[,j]
+  z_j = (1/nrow(X)) * t(X[,j]) %*% W %*% res + v_j * B[j]
+  # Alternatively:
+  ## z_j = (1/nrow(X)) * t(X[,j]) %*% W %*% (y_wr - X[,-j] %*% B[-j])
+  
+  # Use above values to solve for next iteration value of Bj
+  if(z_j > 0 & lam < abs(z_j)){
+    B[j] = (z_j - lam) / v_j
+  }else if(z_j < 0 & lam < abs(z_j)){
+    B[j] = (z_j + lam) / v_j
+  }else{
+    B[j] = 0
+  }
+  
+  return(B[j])
+}
+
 penal = function(y, X, lam, B, family = "binomial"){
   if(!is.element(family, c("binomial","binom"))){
     stop("'family' must be 'binomial' or 'binom'")
@@ -16,7 +42,7 @@ penal = function(y, X, lam, B, family = "binomial"){
   
   # Define convergence criteria
   eps = -Inf
-  tol = 10^-6
+  tol = 10^-5
   maxit = 500 # Do we need a max number of iterations? Perhaps at least until we know the code works.
   iter = 0
   
@@ -25,27 +51,16 @@ penal = function(y, X, lam, B, family = "binomial"){
     B0 = B
     
     for(j in 1:ncol(X)){
-      # Define working response, weights, and current-iteration residuals
-      eta = X %*% B # Linear predictor in terms of current values of B
-      p = exp(eta) / (1 + eta) # pi for current values, used in weights and working reponse
-      W = diag(p(1-p)) # Make weights into diagonal matrix
-      # y_wr = (y - p) / (p (1-p)) + X %*% B # Working response
-      res = solve(W)(y - p) # residuals based on current values
-      v_j = (1/nrow(X)) * t(X[,j]) %*% W %*% X[,j]
-      z_j = (1/nrow(X)) * t(X[,j]) %*% W %*% res + v_j * B[j]
-      # Alternatively:
-      ## z_j = (1/nrow(X)) * t(X[,j]) %*% W %*% (y_wr - X[,-j] %*% B[-j])
       
-      # To add:
-        ## If iter != 0, don't re-calculated B[j] if last B[j] = 0
-      
-      # Use above values to solve for next iteration value of Bj
-      if(z_j > 0 & lam < abs(z_j)){
-        B[j] = (z_j - lam) / v_j
-      }else if(z_j < 0 & lam < abs(z_j)){
-        B[j] = (z_j + lam) / v_j
-      }else{
-        B[j] = 0
+      if(iter == 0){ # Update all B[j]
+        B[j] = calc(y, X, B, j)
+        
+      }else{ # Only update non-zero B[j] after first round
+        
+        if(B[j] != 0){
+          B[j] = calc(y, X, B, j)
+        }
+        
       }
       
     }
@@ -70,6 +85,8 @@ penal = function(y, X, lam, B, family = "binomial"){
   
 }
 
+##########################################
+
 # Find lambda_max and lambda_min
 lam_option = numeric(ncol(X))
 for(j in 1:ncol(X)){
@@ -80,13 +97,16 @@ epsilon = 0.001
 lambda_min = lambda_max * epsilon
 # Recommendation by 761 notes: perform sequence on log scale
 log_lam = seq(from = log(lambda_max), to = log(lambda_min), by = -0.01)
-# For lambda_max, set initial value of B = vector of 0s
+
+# For lambda_max, B = 0 for all j
+# For subsequent lambda, use previous B as initial values
 B = numeric(ncol(X))
 results = list()
 
-for(l in 2:length(lam)){
-    results[l] = penal(y, X, lam[l], B, family = "binomial") # results[[l]] ?
-    B = results$B_new
+for(l in 2:length(log_lam)){
+  lam = exp(log_lam)
+  results[l] = penal(y, X, lam[l], B, family = "binomial") # results[[l]] ?
+  B = results$B_new
   
 }
 
