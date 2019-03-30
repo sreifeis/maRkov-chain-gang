@@ -12,12 +12,12 @@ calc = function(y, X, B, lam, j){
   eta = X %*% B # Linear predictor in terms of current values of B
   p = exp(eta) / (1 + exp(eta)) # pi for current values, used in weights and working reponse
   W = diag(as.numeric(p*(1-p))) # Make weights into diagonal matrix
-  # y_wr = (y - p) / (p (1-p)) + X %*% B # Working response
-  res = solve(W) %*% (y - p) # residuals based on current values
+  y_wr = (y - p) / (p * (1-p)) + X %*% B # Working response
+  # res = solve(W) %*% (y - p) # residuals based on current values
   v_j = (1/nrow(X)) * t(X[,j]) %*% W %*% X[,j]
-  z_j = (1/nrow(X)) * t(X[,j]) %*% W %*% res + v_j * B[j]
+  # z_j = (1/nrow(X)) * t(X[,j]) %*% W %*% res + v_j * B[j]
   # Alternatively:
-  ## z_j = (1/nrow(X)) * t(X[,j]) %*% W %*% (y_wr - X[,-j] %*% B[-j])
+  z_j = (1/nrow(X)) * t(X[,j]) %*% W %*% (y_wr - X[,-j] %*% B[-j])
   
   # Use above values to solve for next iteration value of Bj
   if(z_j > 0 & lam < abs(z_j)){
@@ -40,6 +40,8 @@ penal = function(y, X, lam, B, family = "binomial"){
   # lam = penalization parameter
   # B = previous iteration value of beta vector
   
+  lam_l = lam
+  
   # Define convergence criteria
   eps = -Inf
   tol = 10^-5
@@ -53,12 +55,12 @@ penal = function(y, X, lam, B, family = "binomial"){
     for(j in 1:ncol(X)){
       
       if(iter == 0){ # Update all B[j]
-        b_j = calc(y, X, B, lam, j)
+        b_j = calc(y, X, B, lam_l, j)
         
       }else{ # Only update non-zero B[j] after first round
         
         if(B[j] != 0){
-          b_j = calc(y, X, B, lam, j)
+          b_j = calc(y, X, B, lam_l, j)
         }else{
           b_j = 0
         }
