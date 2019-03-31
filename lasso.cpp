@@ -13,8 +13,8 @@ double update(arma::vec y, arma::mat X, arma::vec B, double lam, unsigned int j)
   for(k = 0; k < n; k++){
     prob[k] = exp(eta[k]) / (1 + exp(eta[k]));
     }
-  arma::mat W = diagmat(p);
-  arma::vec res = solve(W) * (y - p) ;
+  arma::mat W = diagmat(prob);
+  arma::vec res = inv(W) * (y - p) ;
   
   return b_j;
 }

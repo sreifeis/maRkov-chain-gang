@@ -1,6 +1,7 @@
 # Outline for Lasso
 
 library(stats4)
+library(RcppArmadillo)
 
 # Set-up: Need to define/create y, X, lambda (penalization parameters)
 # Assumption: X includes intercept column (all 1s)
