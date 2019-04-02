@@ -50,7 +50,6 @@ penal = function(y, X, lam, B, family = "binomial"){
   while(eps > tol & iter < maxit){
     # Define B0 = B from last iteration - use in convergence calculation
     B0 = B
-    B_update = numeric(length(B))
     
     for(j in 1:ncol(X)){
       
@@ -64,11 +63,11 @@ penal = function(y, X, lam, B, family = "binomial"){
         }
       }
       
-      B_update[j] = b_j
+      B[j] = b_j
     }
     
     # Evaluate convergence criteria - Euclidean distance
-    eps = sqrt((B_update - B0)^2)
+    eps = sqrt(sum((B - B0)^2))
     
     # Update iterations
     iter = iter + 1
@@ -79,20 +78,22 @@ penal = function(y, X, lam, B, family = "binomial"){
   # Evaluate BIC for resulting model
   # From library(stats4): BIC function OR
   # BIC = -2 (log-lik) + n_param * log(n_obs)
-  p_vec = exp(X %*% B_update)/(1 + exp(X %*% B_update))
+  p_vec = exp(X %*% B)/(1 + exp(X %*% B))
   BIC = -2 * sum( y * log(p_vec) + (1-y) * log(1-p_vec) ) + ncol(X) * log(nrow(X))
   
   # Return updated B and BIC criteria for each lambda
-  return(list(lambda = lam, B_new = B_update, crit = BIC))
+  return(list(lambda = lam, B_new = B, crit = BIC))
   
 }
 
 ##########################################
 
 # Find lambda_max and lambda_min
+W = diag(0.5, nrow = n) # Weight matrix when B = 0
+
 lam_option = numeric(ncol(X))
 for(j in 1:ncol(X)){
-  lam_option[j] = (1/nrow(X)) * abs(t(X[,j]) %*% y)
+  lam_option[j] = (1/nrow(X)) * abs(t(X[,j]) %*% W %*% (y - X[,-j] %*% B[-j]))
 }
 
 lambda_max = max(lam_option)
@@ -114,12 +115,18 @@ results = list()
 lambda = exp(log_lam)
 results[[1]] = list(`lambda` = lambda[1], B_new = B, crit = Inf)
 
+bic.vec = numeric(length(lambda))
+bic.vec[1] = 10^10
+
 for(l in 2:length(lambda)){
   # B = results[[l-1]]$B_new
   results[[l]] = penal(y, X, lambda[l], B, family = "binomial") 
   B = results[[l]]$B_new
+  bic.vec[l] = results[[l]]$crit
 }
 
+which.min(bic.vec)
+results[[which.min(bic.vec)]]
 
 # penal = function(y, X, lam, B, family = "binomial", iter){
 #   if(!is.element(family, c("binomial","binom"))){

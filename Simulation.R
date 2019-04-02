@@ -15,9 +15,11 @@ y = rbinom(n, 1, prob)
 
 # Using 761 notes, find lambda_max
 
+W = diag(0.5, nrow = n)
+
 lam_option = numeric(ncol(X))
 for(j in 1:ncol(X)){
-  lam_option[j] = (1/nrow(X)) * abs(t(X[,j]) %*% y)
+  lam_option[j] = (1/nrow(X)) * abs(t(X[,j]) %*% W %*% (y - X[,-j] %*% B[-j]))
 }
 
 lambda_max = max(lam_option)
