@@ -42,7 +42,7 @@ penal = function(y, X, lam, B, family = "binomial"){
   # B = previous iteration value of beta vector
   
   # Define convergence criteria
-  eps = -Inf
+  eps = Inf
   tol = 10^-5
   maxit = 500 # Do we need a max number of iterations? Perhaps at least until we know the code works.
   iter = 0
