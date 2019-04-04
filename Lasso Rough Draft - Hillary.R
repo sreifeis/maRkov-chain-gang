@@ -80,7 +80,7 @@ penal = function(y, X, lam, B, family = "binomial"){
   # BIC = -2 (log-lik) + n_param * log(n_obs)
   # p_vec = exp(X %*% B)/(1 + exp(X %*% B))
   eta_vec = X %*% B
-  BIC = -2 * sum( y * eta_vec - log(1 + exp(eta_vec)) ) / nrow(X) + sum(B==0) * log(nrow(X))
+  BIC = -2 * sum( y * eta_vec - log(1 + exp(eta_vec)) ) / nrow(X) + sum(B != 0) * log(nrow(X))
   
   # Return updated B and BIC criteria for each lambda
   return(list(lambda = lam, B_new = B, crit = BIC))
@@ -111,6 +111,7 @@ lambda_min = lambda_max * epsilon
 
 # Recommendation by 761 notes: perform sequence on log scale
 log_lam = seq(from = log(lambda_max), to = log(lambda_min), by = -0.05)
+# log_lam = seq(from = log(3), to = log(0.005), by = -0.05)
 
 ###################################################
 
@@ -136,78 +137,3 @@ for(l in 2:length(lambda)){
 
 which.min(bic.vec)
 results[[which.min(bic.vec)]]
-
-# penal = function(y, X, lam, B, family = "binomial", iter){
-#   if(!is.element(family, c("binomial","binom"))){
-#     stop("'family' must be 'binomial' or 'binom'")
-#   }
-#   # y = response vector
-#   # X = covariate matrix (n x p)
-#   # lam = penalization parameter
-#   # B = previous iteration value of beta vector
-#   
-#   B_update = numeric(length(B))
-#   
-#   for(j in 1:ncol(X)){
-#     
-#     if(iter == 0){ # Update all B[j]
-#       b_j = calc(y, X, B, lam, j)
-#     }else{ # Only update non-zero B[j] after first round
-#       if(B[j] != 0){
-#         b_j = calc(y, X, B, lam, j)
-#       }else{
-#         b_j = 0
-#       }
-#     }
-#     
-#     B_update[j] = b_j
-#   }
-#   
-#   return(B_update)
-# }
-# 
-# # For lambda_max, B = 0 for all j
-# # For subsequent lambda, use previous B as initial values
-# B = numeric(length = ncol(X))
-# results = list()
-# lambda = exp(log_lam)
-# 
-# tol = 10^-5
-# maxit = 500
-# 
-# for(l in 2:length(lambda)){
-#   
-#   # Define convergence criteria
-#   eps = -Inf
-#   iter = 0
-#   lam = lambda[l]
-#   
-#   while(eps > tol & iter < maxit){
-#     # Define B0 = B from last iteration - use in convergence calculation
-#     B0 = B
-#     
-#     B_update = penal(y, X, lam, B, family = "binomial", iter)
-#     
-#     # Evaluate convergence criteria - Euclidean distance
-#     eps = sqrt((B_update - B0)^2)
-#     
-#     # Update iterations
-#     iter = iter + 1
-#     if(iter == maxit){warning("Model failed to converge within maximum number of iterations")}
-#     
-#   } 
-#   
-#   # Evaluate BIC for resulting model
-#   # From library(stats4): BIC function OR
-#   # BIC = -2 (log-lik) + n_param * log(n_obs)
-#   p_vec = exp(X %*% B_update)/(1 + exp(X %*% B_update))
-#   BIC = -2 * sum( y * log(p_vec) + (1-y) * log(1-p_vec) ) + ncol(X) * log(nrow(X))
-#   
-#   # Record updated B and BIC criteria for each lambda
-#   results[[l]] = list(lambda = lambda, B_new = B_update, crit = BIC)
-#   # Update B with B_update results
-#   B = results[[l]]$B_new
-#   
-# }
-#   
-#   

@@ -139,7 +139,7 @@ log_lam = seq(from = log(lambda_max), to = log(lambda_min), by = -0.05)
     B = results[[l]]
     eta_vec = X %*% B
     bic.vec[l] = -2 * sum( y * eta_vec - log(1 + exp(eta_vec)) ) / nrow(X) + 
-      sum(B==0) * log(nrow(X))
+      sum(B!=0) * log(nrow(X))
   }
   
   which.min(bic.vec)
