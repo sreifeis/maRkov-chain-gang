@@ -136,7 +136,7 @@ log_lam = seq(from = log(lambda_max), to = log(lambda_min), by = -0.05)
     
   for(l in 2:length(lambda)){
     results[[l]] = penalize_cpp(y, X, B, lambda[l]) # Add "family = 'binomial'" 
-    B = results[[l]]$B_new
+    B = results[[l]]
     eta_vec = X %*% B
     bic.vec[l] = -2 * sum( y * eta_vec - log(1 + exp(eta_vec)) ) / nrow(X) + 
       sum(B==0) * log(nrow(X))
