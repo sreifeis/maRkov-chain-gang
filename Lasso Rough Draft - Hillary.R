@@ -78,8 +78,9 @@ penal = function(y, X, lam, B, family = "binomial"){
   # Evaluate BIC for resulting model
   # From library(stats4): BIC function OR
   # BIC = -2 (log-lik) + n_param * log(n_obs)
-  p_vec = exp(X %*% B)/(1 + exp(X %*% B))
-  BIC = -2 * sum( y * log(p_vec) + (1-y) * log(1-p_vec) ) + ncol(X) * log(nrow(X))
+  # p_vec = exp(X %*% B)/(1 + exp(X %*% B))
+  eta_vec = X %*% B
+  BIC = -2 * sum( y * eta_vec - log(1 + exp(eta_vec)) ) / nrow(X) + sum(B==0) * log(nrow(X))
   
   # Return updated B and BIC criteria for each lambda
   return(list(lambda = lam, B_new = B, crit = BIC))
@@ -88,8 +89,16 @@ penal = function(y, X, lam, B, family = "binomial"){
 
 ##########################################
 
+# Fit intercept-only model
+# library(stats)
+fit.int = glm(y ~ 1, family = "binomial")
+int = fit.int$coefficients
+
+# Result: intercept = -0.8473
+prob = exp(int) / (1 + exp(int))
+
 # Find lambda_max and lambda_min
-W = diag(0.5, nrow = n) # Weight matrix when B = 0
+W = diag(prob, nrow = n) # Weight matrix when B = 0
 
 lam_option = numeric(ncol(X))
 for(j in 1:ncol(X)){
