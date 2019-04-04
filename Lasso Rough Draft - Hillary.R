@@ -75,34 +75,41 @@ penal = function(y, X, lam, B, family = "binomial"){
     
   } 
   
-  # Evaluate BIC for resulting model
-  # From library(stats4): BIC function OR
-  # BIC = -2 (log-lik) + n_param * log(n_obs)
-  # p_vec = exp(X %*% B)/(1 + exp(X %*% B))
-  eta_vec = X %*% B
-  BIC = -2 * sum( y * eta_vec - log(1 + exp(eta_vec)) ) / nrow(X) + sum(B != 0) * log(nrow(X))
+  # # Evaluate BIC for resulting model
+  # # From library(stats4): BIC function OR
+  # # BIC = -2 (log-lik) + n_param * log(n_obs)
+  # # p_vec = exp(X %*% B)/(1 + exp(X %*% B))
+  # eta_vec = X %*% B
+  # fit.bic = glm.fit(x = X, y = y, family = "binomial", offset = eta_vec)
+  # bic = BIC(fit.bic)
   
   # Return updated B and BIC criteria for each lambda
-  return(list(lambda = lam, B_new = B, crit = BIC))
+  # return(list(lambda = lam, B_new = B, crit = bic))
+  return(B)
   
 }
 
 ##########################################
 
 # Fit intercept-only model
-# library(stats)
-fit.int = glm(y ~ 1, family = "binomial")
-int = fit.int$coefficients
+# Find maximum possible lambda. At this value, B vector = 0
 
-# Result: intercept = -0.8473
+# library(stats) # For 'glm'
+# library(stats4) # For BIC calculation
+fit = glm(y ~ 1, family = "binomial")
+# Extract intercept
+int = fit$coefficients
+B_test = c(int, numeric((ncol(X) - 1)))
+
 prob = exp(int) / (1 + exp(int))
 
-# Find lambda_max and lambda_min
-W = diag(prob, nrow = n) # Weight matrix when B = 0
+# Find lambda_max
+W = diag(prob*(1-prob), nrow = n) # Weight matrix when B = 0 (other than intercept)
+y_wr = (y - prob) / (prob * (1-prob)) + X %*% B_test # Working response for intercept-only results
 
 lam_option = numeric(ncol(X))
 for(j in 1:ncol(X)){
-  lam_option[j] = (1/nrow(X)) * abs(t(X[,j]) %*% W %*% (y - X[,-j] %*% B[-j]))
+  lam_option[j] = (1/nrow(X)) * abs(t(X[,j]) %*% W %*% (y_wr - X[,-j] %*% B_test[-j]))
 }
 
 lambda_max = max(lam_option)
@@ -111,7 +118,8 @@ lambda_min = lambda_max * epsilon
 
 # Recommendation by 761 notes: perform sequence on log scale
 log_lam = seq(from = log(lambda_max), to = log(lambda_min), by = -0.05)
-# log_lam = seq(from = log(3), to = log(0.005), by = -0.05)
+# Re-transform back to regular scale
+lambda = exp(log_lam)
 
 ###################################################
 
@@ -122,7 +130,6 @@ log_lam = seq(from = log(lambda_max), to = log(lambda_min), by = -0.05)
 # Run simulation in `Simulation.R` first
 B = numeric(length = ncol(X))
 results = list()
-lambda = exp(log_lam)
 results[[1]] = list(`lambda` = lambda[1], B_new = B, crit = Inf)
 
 bic.vec = numeric(length(lambda))
@@ -131,8 +138,15 @@ bic.vec[1] = 10^10
 for(l in 2:length(lambda)){
   # B = results[[l-1]]$B_new
   results[[l]] = penal(y, X, lambda[l], B, family = "binomial") 
-  B = results[[l]]$B_new
-  bic.vec[l] = results[[l]]$crit
+  B = results[[l]]
+  # B = results[[l]]$B_new
+  # Evaluate BIC for resulting model
+  # From library(stats4): BIC function OR
+  # BIC = -2 (log-lik) + n_param * log(n_obs)
+  # p_vec = exp(X %*% B)/(1 + exp(X %*% B))
+  eta_vec = X %*% B
+  fit.bic = glm.fit(y ~ 1, family = "binomial", offset = eta_vec)
+  bic.vec[l] = BIC(fit.bic)
 }
 
 which.min(bic.vec)
@@ -160,18 +174,18 @@ y = rbinom(n, 1, prob)
 library(stats)
 fit.int = glm(y ~ 1, family = "binomial")
 int = fit.int$coefficients
+B_test = c(int, numeric((ncol(X) - 1)))
 
 # Result: intercept = -0.8473
 prob = exp(int) / (1 + exp(int))
 
 # Find lambda_max and lambda_min
-W = diag(prob, nrow = n) # Weight matrix when B = 0 (other than intercept)
-
-B_test = c(int, numeric((ncol(X) - 1)))
+W = diag(prob(1-prob), nrow = n) # Weight matrix when B = 0 (other than intercept)
+y_wr = (y - prob) / (prob * (1-prob)) + X %*% B_test # Working response for intercept-only results
 
 lam_option = numeric(ncol(X))
 for(j in 1:ncol(X)){
-  lam_option[j] = (1/nrow(X)) * abs(t(X[,j]) %*% W %*% (y - X[,-j] %*% B_test[-j]))
+  lam_option[j] = (1/nrow(X)) * abs(t(X[,j]) %*% W %*% (y_wr - X[,-j] %*% B_test[-j]))
 }
 
 lambda_max = max(lam_option)
