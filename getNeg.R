@@ -16,5 +16,11 @@ getNeg <- function()
 {
   bing_df<- tidytext::get_sentiments("bing")
   neg_words <- bing_df$word[which(bing_df$sentiment == "negative")]
+  
+  if(length(neg_words)==0)
+  {
+    stop("There are no negative words")
+  }
+  
   return(neg_words)
 }

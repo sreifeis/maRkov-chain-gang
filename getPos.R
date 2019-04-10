@@ -16,5 +16,11 @@ getPos <- function()
 {
   bing_df<- tidytext::get_sentiments("bing")
   pos_words <- bing_df$word[which(bing_df$sentiment == "positive")]
+  
+  if(length(pos_words)==0)
+  {
+    stop("There are no positive words")
+  }
+  
   return(pos_words)
 }
