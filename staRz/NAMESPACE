@@ -2,3 +2,5 @@
 
 export(LQA.lasso)
 export(soft.thresh)
+importFrom(Rcpp,sourceCpp)
+useDynLib(staRz, .registration = TRUE)

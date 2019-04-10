@@ -7,7 +7,11 @@ Authors@R: c( person("Sarah", "Reifeis", email = "sreifeis@email.unc.edu", role 
               person("Ethan", "Alt", email = "ethanalt@live.unc.edu", role = "aut"),
               person("Brady", "Nifong", email = "brady_nifong@unc.edu", role = "aut") )
 Description: What the package does (one paragraph).
-Imports: stats, Rcpp (>= 0.11.0), RcppArmadillo
+Imports: 
+    stats,
+    stats4,
+    Rcpp,
+    RcppArmadillo
 LinkingTo: Rcpp, RcppArmadillo
 Depends: R (>= 3.5.1)
 Suggests: testthat
