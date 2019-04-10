@@ -14,6 +14,9 @@
 #' @examples 
 #' give examples
 #' 
+#' @useDynLib staRz, .registration = TRUE
+#' @importFrom Rcpp sourceCpp
+#' 
 #' @export
 LQA.lasso <- function(X, Y, beta_start, lambda, tol, max_it){
   LQA_lasso(X, Y, beta_start, lambda, tol, max_it)

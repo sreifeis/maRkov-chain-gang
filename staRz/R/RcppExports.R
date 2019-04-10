@@ -2,10 +2,10 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 soft_thresh <- function(z, lambda) {
-    .Call('_staRz_soft_thresh', PACKAGE = 'staRz', z, lambda)
+    .Call(`_staRz_soft_thresh`, z, lambda)
 }
 
 LQA_lasso <- function(X, Y, beta_start, lambda, tol, max_it) {
-    .Call('_staRz_LQA_lasso', PACKAGE = 'staRz', X, Y, beta_start, lambda, tol, max_it)
+    .Call(`_staRz_LQA_lasso`, X, Y, beta_start, lambda, tol, max_it)
 }
 
