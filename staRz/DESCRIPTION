@@ -1,17 +1,21 @@
 Package: staRz
-Title: What the Package Does (one line, title case)
-Version: 0.0.0.9000
+Title: A Regression Method for Sentiment Analysis of High Dimensional Text Data
+Version: 0.0.1
 Authors@R: c( person("Sarah", "Reifeis", email = "sreifeis@email.unc.edu", role = c("aut","cre")), 
               person("Hillary", "Heiling", email = "hheiling@live.unc.edu", role = "aut"), 
               person("Nathan", "Bean", email = "nbean@live.unc.edu", role = "aut"),
               person("Ethan", "Alt", email = "ethanalt@live.unc.edu", role = "aut"),
               person("Brady", "Nifong", email = "brady_nifong@unc.edu", role = "aut") )
-Description: What the package does (one paragraph).
+Description: Takes Amazon reviews and uses natural language processing and LASSO to build a parsimonious regression model for predicting the average rating (number of stars, dichotomized to <4, 4+) an item received.
 Imports: 
     stats,
     stats4,
     Rcpp,
-    RcppArmadillo
+    RcppArmadillo,
+    ngram,
+    stringr,
+    tidytext,
+    tm
 LinkingTo: Rcpp, RcppArmadillo
 Depends: R (>= 3.5.1)
 Suggests: testthat
