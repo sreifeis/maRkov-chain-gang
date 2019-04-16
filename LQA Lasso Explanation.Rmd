@@ -1,0 +1,108 @@
+---
+title: "Lasso Write-Up"
+author: "Hillary Heiling"
+date: "April 14, 2019"
+output: html_document
+---
+
+\usepackage{amsmath}
+
+## LQA Lasso Algorithm
+
+In this project, we used penalized logistic regression to chose a prediction model. In this penalized logistic regression, we aimed to minimize the following:
+
+$$ \hat \beta = argmin_\beta \space \left (-\frac{1}{n}\ell(\beta) + \lambda \sum_{j=1}^p |\beta_j| \right) $$
+
+where $\ell(\beta)$ is the log likelihood for the model and $\beta_j$ is the coefficient parameter associated with the jth covariate. 
+
+Note: This minimization was achieved through coordinate descent. In coordinate descent, we solve for the new estimate of $\beta_j$ by assuming that all other $\beta_k$ for $k \ne j$ is fixed at their last updated values, i.e. the "current" values of $\beta_k$. (This algorithm will be discussed on more detail later).
+
+In order to simplify this minimization problem, we first approximated $\ell(\beta)$ using a second order Taylor series expansion about $x_i \tilde \beta$, where $x_i = [x_{i1},...,x_{ip}]$ is the 1xp row vector of covariate values for individual i and $\tilde \beta$ is the current value of the $\beta = [\beta_1, ..., \beta_p]^T$ px1 vector of coefficients associated with each of the p covariates.
+
+$$ \ell_i(\beta) \approx \ell_i(\tilde \beta) + \ell_i'(\tilde \beta)(x_i\beta - x_i\tilde\beta) +
+\ell_i''(\tilde\beta) (x_i\beta - x_i\tilde\beta)^2 $$
+
+where
+
+$$ \ell_i(\beta) = y_i(x_i\beta) - log(1 + exp(x_i\beta)) $$
+$$ \ell_i'(\beta) = \frac{d}{d(x_i\beta)} \ell_i(\beta) = y_i - \frac{exp(x_i\beta)}{1 + exp(x_i\beta)}  $$
+
+$$ \ell_i''(\beta) = \frac{d}{d(x_i\beta)} \ell_i'(\beta) = \left(\frac{exp(x_i\beta)}{1 + exp(x_i\beta)} \right)^2 - \frac{exp(x_i\beta)}{1 + exp(x_i\beta)} = -p(x_i)(1 - p(x_i)) $$
+
+where 
+$$p(x_i) = \frac{exp(x_i\beta)}{1 + exp(x_i\beta)}$$
+
+we will denote 
+$$ \tilde p(x_i) = \frac{exp(x_i\tilde\beta)}{1 + exp(x_i\tilde\beta)} $$
+
+Using a complete-the-square approach, we can approximate $\ell_i(\beta)$ as follows:
+
+$$ \ell_i(\beta) \approx -\frac{1}{2} \tilde p(x_i)(1-\tilde p(x_i))\left(\frac{y_i - \tilde p(x_i)}{\tilde p(x_i)(1-\tilde p(x_i))} + x_i\tilde\beta - xi\beta \right)^2 $$
+
+Then,
+
+$$ \ell(\beta) \approx -\frac{1}{2} \sum_{i=1}^n \tilde p(x_i)(1-\tilde p(x_i))\left(\frac{y_i - \tilde p(x_i)}{\tilde p(x_i)(1-\tilde p(x_i))} + x_i\tilde\beta - xi\beta \right)^2  $$
+
+For notational convenience we can re-write some of the above terms as follows:
+
+The weight $w_i$:
+
+$$ w_i = \tilde p(x_i)(1-\tilde p(x_i)) $$
+The working response $\tilde y_i$:
+
+$$ \tilde y_i = \frac{y_i - \tilde p(x_i)}{\tilde p(x_i)(1-\tilde p(x_i))} + x_i\tilde\beta $$
+
+Consequently, the $\hat \beta$ solution of interest minimizes the following:
+
+$$ \hat \beta = argmin_\beta \space \frac{1}{2n} \sum_{i=1}^n w_i (\tilde y_i - x_i\beta)^2 + \lambda \sum_{j=1}^p |\beta_j| $$
+
+The coordinate descent algorithm is as follows:
+
+**Outer Loop (1)**: 
+
+1. Loop over the range of potential $\lambda$ from $\lambda_{max}$ to $\lambda_{min}$ (where $\lambda$ values are equally spaced on the log-scale).
+
+  + If $\lambda$ = $\lambda_{max}$, set the initial values of $\beta^{(0)}$ to be all 0 for all covariates.
+
+    **Middle Loop (2)**:
+    
+    2. For each iteration t, Set the "current" values of $\tilde\beta$ to $\beta^{(t-1)}$, the latest updated $\beta$ values found in the previous iteration.
+    
+        **Inner Loop (3)**: For j = 1,...,p
+        
+        3. Update $\beta_j$ by fixing all other $\beta_k$ for $k \ne j$ to be equal to $\tilde\beta_k$, the $\beta_k$ value from the "current" values of $\tilde\beta$.
+        
+        4. Update $\tilde\beta_j$ to equal the newly found $\hat \beta_j$
+      
+    5. Let the latest updated version of $\beta$ equal $\beta^{(t)}$. 
+    
+    6. Check if $||\beta^{(t)} - \beta^{(t-1)} < \epsilon$ for some small tolerance level $\epsilon$. If true, then stop. If fals, then go back to "Middle Loop" and repeat steps 2 - 6 until convergence.
+  
+To update each $\hat \beta_j$, we note the following:
+
+$$ \frac{\partial}{\partial\beta_j} \left ( \frac{1}{2n} \sum_{i=1}^n w_i (\tilde y_i - x_i\beta )^2 + \lambda \sum_{j=1}^p |\beta_j| \right ) $$ 
+
+$$ = \frac{\partial}{\partial \beta_j} \left ( \frac{1}{2n} \sum_{i=1}^n w_i (\tilde y_i - x_{i-j}\tilde\beta_{-j} - x_{ij}\beta_j )^2 \right ) + \lambda \partial(|\beta_j|) $$
+where $\partial(|\beta_j|)$ is the subdifferential of $|\beta_j|$, $x_{i-j}$ is the covariate vector $x_i$ without the jth covariate, and $\beta_{-j}$ is the $\beta$ vector without the jth coefficient parameter.
+
+$$ = -\frac{1}{n} \sum_{i=1}^n w_i x_{ij} (\tilde y_i - x_{i-j}\tilde\beta_{-j}) + \frac{1}{n} \sum_{i=1}^n w_i x_{ij}^2 \beta_j + \lambda \partial(|\beta_j|) $$
+
+$$ = -z_j + v_j \beta_j + \lambda \partial(|\beta_j|) $$
+
+where
+
+$$ z_j = \frac{1}{n} \sum_{i=1}^n w_i x_{ij} (\tilde y_i - x_{i-j}\tilde\beta_{-j}) $$
+
+$$ v_j = \frac{1}{n} \sum_{i=1}^n w_i x_{ij}^2 $$
+
+Solving for $\beta_j$, we get the following closed-form solution:
+
+$$ \hat \beta_j = \frac{S(z_j,\lambda)}{v_j} = \frac{sign(z_j)(|z_j| - \lambda)_+}{v_j} =  \begin{cases}
+  \frac{z_j - \lambda}{v_j} & \text{if } z_j > 0 \text{ and } \lambda < |z_j| \\
+  \frac{z_j + \lambda}{v_j} & \text{if } z_j < 0 \text{ and } \lambda < |z_j| \\
+  0 & \text{if } \lambda \ge |z_j|
+\end{cases} $$
+
+To find $\lambda_{max}$, the smallest value of $\lambda$ such that all of the penalized coefficients are 0, we can see that $\lambda_{max}$ will equal $max_j {z_j}$ where the $\tilde\beta$ values are determined by an intercept-only model. We will define $\lambda_{min} = \lambda_{max} \epsilon $ for some small value of $\epsilon > 0$.
+
+The End
