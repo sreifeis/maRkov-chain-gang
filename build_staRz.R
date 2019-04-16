@@ -24,11 +24,20 @@ library(testthat)
 #    running the added function to check that it works
 
 ## Testing:
-devtools::test()
+document("staRz")
+load_all("staRz")
+devtools::test("staRz")
 # Instead, could also click "Build"->"Test Package"
 # Modify any tests that don't pass, and re-do line above until all tests pass
 
+## Creating new tarball
+build("staRz")
+
 ## Checking:
 setwd("~/SP19/BIOS 735/maRkov-chain-gang/staRz/tests")
-check(manual=TRUE) # error: package can't be installed
+check(manual=TRUE) # error: 'package can't be installed' -- not worrying about this
+
+## Notes:
+# No tests for soft_thresh
+# No tests ~yet~ for Lasso output
 
