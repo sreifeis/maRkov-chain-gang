@@ -72,8 +72,8 @@ results = list()
 # For lambda max, B = 0
 results[[1]] = B
 # Initialize vector to store BIC values
-bic = numeric(length(lambda))
-bic[1] = 10^10 # Some arbitrarily large value
+ebic = numeric(length(lambda))
+ebic[1] = 10^10 # Some arbitrarily large value
 
 for(l in 2:length(lambda)){
   # Calculate new B for specified lambda
@@ -85,18 +85,18 @@ for(l in 2:length(lambda)){
   # Calculate BIC
   # Calculate linear predictor with updated B
   eta = X %*% B
-  # BIC = -2 log-lik + (num parameters) * log(num observations)
-  bic[l] = -2 * sum( y * eta - log(1 + exp(eta)) ) / nrow(X) +
-    sum(B!=0) * log(nrow(X))
+  # EBIC = -2 log-lik + (num params) * log(num observations) + 2 * (num params) * constant * log(num total param - cols of X)
+  ebic[l] = -2 * sum( y * eta - log(1 + exp(eta)) ) / nrow(X) +
+    sum(B!=0) * log(nrow(X)) + 2 * sum(B!=0) * 0.5 * log(ncol(X))
+  # Potential options for constant in last term: 0.25, 0.5, 1
+  # According to Chen and Chen paper on extended BIC (EBIC)
+  # 0.5 good option (1 if really concerned about FDR)
 }
 
 # BIC isn't really working right now, but general idea:
-which.min(bic)
-results[[which.min(bic)]]
+which.min(ebic)
+results[[which.min(ebic)]]
 
-# Alternative BIC - need to work through issues
-fit.bic = glm(y ~ , family = "binomial", offset = eta)
-BIC(fit.bic)
 
 
 ############################################
@@ -128,9 +128,12 @@ for(l in 2:length(lambda)){
   # Calculate BIC
   # Calculate linear predictor with updated B
   eta.pkg = X %*% B.pkg
-  # BIC = -2 log-lik + (num parameters) * log(num observations)
-  bic.pkg[l] = -2 * sum( y * eta.pkg - log(1 + exp(eta.pkg)) ) / nrow(X) +
-    sum(B.pkg!=0) * log(nrow(X))
+  # EBIC = -2 log-lik + (num params) * log(num observations) + 2 * (num params) * constant * log(num total param - cols of X)
+  ebic.pkg[l] = -2 * sum( y * eta.pkg - log(1 + exp(eta.pkg)) ) / nrow(X) +
+    sum(B.pkg!=0) * log(nrow(X)) + 2 * sum(B.pkg!=0) * 0.5 * log(ncol(X))
+  # Potential options for constant in last term: 0.25, 0.5, 1
+  # According to Chen and Chen paper on extended BIC (EBIC)
+  # 0.5 good option (1 if really concerned about FDR)
 }
 
 ## Check R wrapper function output against sourced cpp function output
