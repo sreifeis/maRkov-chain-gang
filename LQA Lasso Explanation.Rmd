@@ -9,15 +9,15 @@ output: html_document
 
 ## LQA Lasso Algorithm
 
-In this project, we used penalized logistic regression to chose a prediction model. In this penalized logistic regression, we aimed to minimize the following:
+In this project, we used penalized logistic regression to chose a prediction model. In this penalized logistic regression, the estimates $\hat\beta$ were found by minimizing the following:
 
 $$ \hat \beta = argmin_\beta \space \left (-\frac{1}{n}\ell(\beta) + \lambda \sum_{j=1}^p |\beta_j| \right) $$
 
-where $\ell(\beta)$ is the log likelihood for the model and $\beta_j$ is the coefficient parameter associated with the jth covariate. 
+where $\ell(\beta) = \sum_{i=1}^n \ell_i(\beta)$ is the log likelihood for the model and $\beta_j$ is the coefficient parameter associated with the jth covariate. 
 
-Note: This minimization was achieved through coordinate descent. In coordinate descent, we solve for the new estimate of $\beta_j$ by assuming that all other $\beta_k$ for $k \ne j$ is fixed at their last updated values, i.e. the "current" values of $\beta_k$. (This algorithm will be discussed on more detail later).
+Note: This minimization was achieved through coordinate descent (detailed later). In coordinate descent, we solve for the new estimate of $\beta_j$ by assuming that all other $\beta_k$ for $k \ne j$ is fixed at their last updated values, i.e. the "current" values of $\beta_k$. (This algorithm will be discussed on more detail later).
 
-In order to simplify this minimization problem, we first approximated $\ell(\beta)$ using a second order Taylor series expansion about $x_i \tilde \beta$, where $x_i = [x_{i1},...,x_{ip}]$ is the 1xp row vector of covariate values for individual i and $\tilde \beta$ is the current value of the $\beta = [\beta_1, ..., \beta_p]^T$ px1 vector of coefficients associated with each of the p covariates.
+In order to simplify this minimization problem, we first approximated $\ell(\beta)$ using a second order Taylor series expansion--the local quadratic approximation (LQA)--about $x_i \tilde \beta$ where $x_i = [x_{i1},...,x_{ip}]$ is the 1xp row vector of covariate values for individual i and $\tilde \beta$ is the current value (i.e. last updated value) of the $\beta = [\beta_1, ..., \beta_p]^T$ px1 vector of coefficients associated with each of the p covariates. The covariates $x_{ij}$ are scaled so that $\sum_{i=1}^n x_{ij} = 0$ and $\sum_{i=1}^n x_{ij}^2 = 1$ (each covariate is scaled so that mean = 0 and variance = 1). The local quadratic approximation is detailed below:
 
 $$ \ell_i(\beta) \approx \ell_i(\tilde \beta) + \ell_i'(\tilde \beta)(x_i\beta - x_i\tilde\beta) +
 \ell_i''(\tilde\beta) (x_i\beta - x_i\tilde\beta)^2 $$
@@ -25,23 +25,28 @@ $$ \ell_i(\beta) \approx \ell_i(\tilde \beta) + \ell_i'(\tilde \beta)(x_i\beta -
 where
 
 $$ \ell_i(\beta) = y_i(x_i\beta) - log(1 + exp(x_i\beta)) $$
-$$ \ell_i'(\beta) = \frac{d}{d(x_i\beta)} \ell_i(\beta) = y_i - \frac{exp(x_i\beta)}{1 + exp(x_i\beta)}  $$
+$$ \ell_i'(\beta) = \frac{\partial}{\partial(x_i\beta)} \ell_i(\beta) = y_i - \frac{exp(x_i\beta)}{1 + exp(x_i\beta)}  $$
+and
 
-$$ \ell_i''(\beta) = \frac{d}{d(x_i\beta)} \ell_i'(\beta) = \left(\frac{exp(x_i\beta)}{1 + exp(x_i\beta)} \right)^2 - \frac{exp(x_i\beta)}{1 + exp(x_i\beta)} = -p(x_i)(1 - p(x_i)) $$
+$$ \ell_i''(\beta) = \frac{\partial}{\partial(x_i\beta)} \ell_i'(\beta) = \left(\frac{exp(x_i\beta)}{1 + exp(x_i\beta)} \right)^2 - \frac{exp(x_i\beta)}{1 + exp(x_i\beta)} = -p(x_i)(1 - p(x_i)) $$
 
 where 
+
 $$p(x_i) = \frac{exp(x_i\beta)}{1 + exp(x_i\beta)}$$
 
-we will denote 
+In later calculations that include $\tilde\beta$ we will denote,
+
 $$ \tilde p(x_i) = \frac{exp(x_i\tilde\beta)}{1 + exp(x_i\tilde\beta)} $$
 
 Using a complete-the-square approach, we can approximate $\ell_i(\beta)$ as follows:
 
-$$ \ell_i(\beta) \approx -\frac{1}{2} \tilde p(x_i)(1-\tilde p(x_i))\left(\frac{y_i - \tilde p(x_i)}{\tilde p(x_i)(1-\tilde p(x_i))} + x_i\tilde\beta - xi\beta \right)^2 $$
+$$ \ell_i(\beta) \approx -\frac{1}{2} \tilde p(x_i)(1-\tilde p(x_i))\left(\frac{y_i - \tilde p(x_i)}{\tilde p(x_i)(1-\tilde p(x_i))} + x_i\tilde\beta - x_i\beta \right)^2 $$
 
 Then,
 
-$$ \ell(\beta) \approx -\frac{1}{2} \sum_{i=1}^n \tilde p(x_i)(1-\tilde p(x_i))\left(\frac{y_i - \tilde p(x_i)}{\tilde p(x_i)(1-\tilde p(x_i))} + x_i\tilde\beta - xi\beta \right)^2  $$
+$$ \ell(\beta) \approx -\frac{1}{2} \sum_{i=1}^n \tilde p(x_i)(1-\tilde p(x_i))\left(\frac{y_i - \tilde p(x_i)}{\tilde p(x_i)(1-\tilde p(x_i))} + x_i\tilde\beta - x_i\beta \right)^2 + c(\tilde\beta) $$
+
+where $c(\tilde\beta)$ is some constant that may depend on the data and $\tilde\beta$, but does not depend on $\beta$. Since the partial derivatives (detailed later) taken with respect to $\beta_j$ of this constant term will be zero, this constant term can be ignored.
 
 For notational convenience we can re-write some of the above terms as follows:
 
@@ -56,27 +61,25 @@ Consequently, the $\hat \beta$ solution of interest minimizes the following:
 
 $$ \hat \beta = argmin_\beta \space \frac{1}{2n} \sum_{i=1}^n w_i (\tilde y_i - x_i\beta)^2 + \lambda \sum_{j=1}^p |\beta_j| $$
 
-The coordinate descent algorithm is as follows:
+### Coordinate Descent Algorithm (for Lasso)
 
-**Outer Loop (1)**: 
+1. **Outer Loop**: Loop over the range of potential $\lambda$ from $\lambda_{max}$ to $\lambda_{min}$ (where $\lambda$ values are equally spaced on the log-scale). For notational purposes, let $\lambda^s$ equal the $s^{th}$ $\lambda$ in the sequence. 
 
-1. Loop over the range of potential $\lambda$ from $\lambda_{max}$ to $\lambda_{min}$ (where $\lambda$ values are equally spaced on the log-scale).
-
-  + If $\lambda$ = $\lambda_{max}$, set the initial values of $\beta^{(0)}$ to be all 0 for all covariates.
-
-    **Middle Loop (2)**:
+  + If $\lambda = \lambda_{max} = \lambda^0$, set the initial values of $\beta^{(0)}$ to be 0 for all covariates.
+  
+  + For each following $\lambda^s$ value (s > 0) in the sequence, use the previous $\beta$ solution from $\lambda^{s-1}$ as the initial values of $\beta$.
     
-    2. For each iteration t, Set the "current" values of $\tilde\beta$ to $\beta^{(t-1)}$, the latest updated $\beta$ values found in the previous iteration.
+    2. **Middle Loop**: For each iteration t, Set the "current" values of $\tilde\beta$ to $\beta^{(t-1)}$, the latest updated $\beta$ values found in the previous iteration.
     
-        **Inner Loop (3)**: For j = 1,...,p
+        **Inner Loop**: For j = 1,...,p
         
-        3. Update $\beta_j$ by fixing all other $\beta_k$ for $k \ne j$ to be equal to $\tilde\beta_k$, the $\beta_k$ value from the "current" values of $\tilde\beta$.
+        A. Update $\beta_j$ by (a) fixing all other $\beta_k$ for $k \ne j$ to be equal to $\tilde\beta_k$, the $\beta_k$ value from the "current" values of $\tilde\beta$ and then (b) solving the minimization problem for $\beta_j$ (described later).
         
-        4. Update $\tilde\beta_j$ to equal the newly found $\hat \beta_j$
-      
-    5. Let the latest updated version of $\beta$ equal $\beta^{(t)}$. 
+        B. Update $\tilde\beta_j$ to equal the newly found $\hat \beta_j$
     
-    6. Check if $||\beta^{(t)} - \beta^{(t-1)} < \epsilon$ for some small tolerance level $\epsilon$. If true, then stop. If fals, then go back to "Middle Loop" and repeat steps 2 - 6 until convergence.
+    3. Once each $\beta_j$ is updated for j=1,...,p, let the new updated version of $\beta$ equal $\beta^{(t)}$. 
+    
+    4. Check if $||\beta^{(t)} - \beta^{(t-1)}|| < \epsilon$ for some small tolerance level $\epsilon$. If true, then stop. If false, then go back to "Middle Loop" and repeat steps 2 - 4 until convergence.
   
 To update each $\hat \beta_j$, we note the following:
 
@@ -105,4 +108,6 @@ $$ \hat \beta_j = \frac{S(z_j,\lambda)}{v_j} = \frac{sign(z_j)(|z_j| - \lambda)_
 
 To find $\lambda_{max}$, the smallest value of $\lambda$ such that all of the penalized coefficients are 0, we can see that $\lambda_{max}$ will equal $max_j {z_j}$ where the $\tilde\beta$ values are determined by an intercept-only model. We will define $\lambda_{min} = \lambda_{max} \epsilon $ for some small value of $\epsilon > 0$.
 
-The End
+The paper by Breheny and Huang (2011) specifies how to find $\lambda_{max}$ when we are including an intercept in the model. First, an intercept-only model (using some standard maximization tool) is fit to the data. Then, we set $\tilde\beta = [\beta_0, 0, ..., 0]$ where $\beta_0$ is the intercept from the fit model. We use this $\tilde\beta$ to calculate $z_j$ (expression given above) for all j. Then, $\lambda_{max} = max_j|z_j|$.
+
+[The End]
