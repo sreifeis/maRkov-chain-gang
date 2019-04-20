@@ -110,4 +110,12 @@ To find $\lambda_{max}$, the smallest value of $\lambda$ such that all of the pe
 
 The paper by Breheny and Huang (2011) specifies how to find $\lambda_{max}$ when we are including an intercept in the model. First, an intercept-only model (using some standard maximization tool) is fit to the data. Then, we set $\tilde\beta = [\beta_0, 0, ..., 0]$ where $\beta_0$ is the intercept from the fit model. We use this $\tilde\beta$ to calculate $z_j$ (expression given above) for all j. Then, $\lambda_{max} = max_j|z_j|$.
 
+The "best" $\lambda$ will be the $\lambda$ with the lowest extended BIC (Chen & Chen, 2008). The extended BIC is as follows:
+
+$$ EBIC_\lambda = -2 \ell(\hat\beta(s,\lambda)) + s_\lambda log(n) + 2 s_\lambda \gamma log(P) $$
+
+where $s_\lambda$ is the number of covariates not penalized to zero during the lasso coordinate descent algorithm for a particular value of $\lambda$, n is the number of observations, P is the number of original covariates, $\gamma$ is some constant between 0 and 1 (in this case, 0.5 from recommendations from Chen & Chen), and $\hat\beta(s_\lambda)$ is the calculated $\beta$ values after the penalized lasso regression procedure at the specified value of $\lambda$. Note that if we were to set $\gamma = 0$, this would reduce to the usual BIC (i.e. this extended BIC - EBIC - adds an additional penalty to the usual BIC). According to Chen & Chen (2008), this EBIC performs better in high dimensional settings (e.g. it reduceds the false discovery rate (FDR)).
+
+Once the best $\lambda$ is found, then the final $\beta$ we will use for the model will be the $\beta$ calculated during the coordinate descent algorithm at this value of $\lambda$. 
+
 [The End]
