@@ -109,7 +109,9 @@ arma::vec LQA_lasso( arma::mat X, arma::vec Y, arma::vec beta_start, double lamb
       sqr_diff = ( (beta(k) - beta_tilde(k)) * (beta(k) - beta_tilde(k)) );
       abs_diff = as_scalar( sqrt( arma::pow(sqr_diff, 2) ) );
       if(abs_diff > tol){
-        big_abs_diff(k) = 1;
+        big_abs_diff(k) = 1.0;
+      }else{
+        big_abs_diff(k) = 0.0;
       }
     }
     abs_diff_sum = sum(big_abs_diff);
