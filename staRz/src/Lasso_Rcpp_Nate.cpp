@@ -67,7 +67,7 @@ arma::vec LQA_lasso( arma::mat X, arma::vec Y, arma::vec beta_start, double lamb
   arma::vec X_beta_withoutj(n);
   double st_input = 0.0;
   double beta_denom = 0.0;
-  arma::mat sqr_diff(1,1);
+  arma::mat beta_diff(1,1);
   double abs_diff = 0.0;
   arma::vec big_abs_diff = arma::zeros(p);
   double abs_diff_sum = 1.0;
@@ -106,8 +106,8 @@ arma::vec LQA_lasso( arma::mat X, arma::vec Y, arma::vec beta_start, double lamb
     // # Calculate the absolute value of the differences between current and previous betas;
     // # Count the number of beta differences between last and current iteration that are larger than tol;
     for(int k = 0; k < p; k++) {
-      sqr_diff = ( (beta(k) - beta_tilde(k)) * (beta(k) - beta_tilde(k)) );
-      abs_diff = as_scalar( sqrt( arma::pow(sqr_diff, 2) ) );
+      beta_diff = ( beta(k) - beta_tilde(k) );
+      abs_diff = as_scalar( sqrt( arma::pow(beta_diff, 2) ) );
       if(abs_diff > tol){
         big_abs_diff(k) = 1.0;
       }else{
@@ -117,6 +117,8 @@ arma::vec LQA_lasso( arma::mat X, arma::vec Y, arma::vec beta_start, double lamb
     abs_diff_sum = sum(big_abs_diff);
     
   }
+  
+  Rprintf( "iter: %u \n", iter);
   
   return beta_tilde;
   
