@@ -19,30 +19,22 @@ dat3$stars_binary <- ifelse( dat3$reviews.rating >= 4, 1, 0 )
 
 
 ######################################################
-
 # Define y and X in our data
-
 # y = nx1 vector, X = nxp matrix with intercept column
-
 ######################################################
 
 y <- as.matrix( dat3[,33] )
 X_no_scale <- as.matrix( dat3[,-c(1,33)] )
-#X <- scale(X_no_scale, center = T, scale = T)
+# X <- scale(X_no_scale, center = T, scale = T)
 n <- dim(X_no_scale)[1]
 
 ###################################################
-## Subset X2 into training, test, and holdout data
-## 50% training, 30% test, 20% holdout
+## Subset X into training, test, and holdout data
+## 50% training, 50% test
 ###################################################
-
-# Question: scale on subset of X, or scale total X and then subset? Can discuss
-# For now, scaled first and then subset
 
 all.samples = 1:n
 num.test = round(n/2, digits = 0)
-# Have also tried n/2, just experimented to see if smaller sample size speeds things up
-# Answer: function still very slow
 
 set.seed(735)
 test.rows = sample(all.samples, size = num.test, replace = F)
@@ -51,17 +43,6 @@ X.train0 = cbind(1, X_no_scale[-test.rows,])
 y.train = y[-test.rows]
 X.test0 = cbind(1, X_no_scale[test.rows,])
 y.test = y[test.rows]
-# X.rest0 = cbind(1, X_no_scale[test.rows,])
-# y.rest = y[test.rows]
-# 
-# test.samples <- 1:length(test.rows)
-# num.holdout = round( length(test.rows)*2/5, digits = 0 )
-# holdout.rows = sample(test.samples, size = num.holdout, replace = F)
-# 
-# X.test0 = X.rest0[-holdout.rows,]
-# y.test = y.rest[-holdout.rows]
-# X.holdout0 = X.rest0[holdout.rows,]
-# y.holdout = y.rest[holdout.rows]
 
 #############################################################
 ## Standardize training and test sets using training values
@@ -71,11 +52,11 @@ train.means <- colMeans(X.train0)
 train.sds <- apply(X.train0, 2, sd)
 X.train <- X.train0
 X.test <- X.test0
-#X.holdout <- X.holdout0
+
+# Only scale covariates that are not intercept
 for(j in 2:dim(X.train0)[2]){
   X.train[,j] <- (X.train0[,j] - train.means[j]) / train.sds[j]
   X.test[,j] <- (X.test0[,j] - train.means[j]) / train.sds[j]
-  #X.holdout[,j] <- (X.holdout0[,j] - train.means[j]) / train.sds[j]
 }
 
 
@@ -96,9 +77,9 @@ prob = exp(int) / (1 + exp(int))
 prob.vec <- rep(prob, num.train)
 
 # Find lambda_max
-#W = diag(prob*(1-prob), nrow = n) # Weight matrix when B = 0 (other than intercept)
 W = prob*(1-prob)  # Weight matrix when B = 0 (other than intercept)
-y_wr = (y.train - prob) / (prob * (1-prob)) + X.train %*% B_test # Working response for intercept-only results
+# Working response for intercept-only results
+y_wr = (y.train - prob) / (prob * (1-prob)) + X.train %*% B_test 
 
 lam_option = numeric(ncol(X.train))
 for(j in 1:ncol(X.train)){
@@ -151,7 +132,6 @@ for(l in 2:length(lambda)){
   # Potential options for constant in last term: 0.25, 0.5, 1
   # According to Chen and Chen paper on extended BIC (EBIC)
   # 0.5 good option
-  sprintf("l: %i", l)
 }
 time.stop <- Sys.time()
 time.stop - time.start
@@ -159,34 +139,6 @@ time.stop - time.start
 ## Results
 which.min(bic.pkg[-1]) # smallest BIC
 beta.coefs <- results.pkg[[which.min(bic.pkg[-1])]]
-
-########################################################################
-########################################################################
-# # scratch work
-# 
-# l = 2
-# 
-# # Calculate new B for specified lambda
-# time.start <- Sys.time()
-# B.pkg = numeric(length = ncol(X.train))
-# results.pkg[[l]] = staRz::LQA.lasso(X.train, Y=y.train, B.pkg, lambda[l], tol = 10^-2, max_it = 1000)
-# time.stop <- Sys.time()
-# time.stop - time.start
-# # Update B with new value
-# B.pkg = results.pkg[[l]]
-# # Calculate EBIC - Extended BIC (Chen and Chen 2008)
-# # Calculate linear predictor with updated B
-# eta.pkg = X.train %*% B.pkg
-# # EBIC = -2 log-lik + (num params) * log(num observations) + 2 * (num params) * constant * log(num total param - cols of X)
-# bic.pkg[l] = -2 * sum( y.train * eta.pkg - log(1 + exp(eta.pkg)) ) / nrow(X.train) +
-#   sum(B.pkg!=0) * log(nrow(X.train)) + 2 * sum(B.pkg!=0) * 0.5 * log(ncol(X.train))
-# # Potential options for constant in last term: 0.25, 0.5, 1
-# # According to Chen and Chen paper on extended BIC (EBIC)
-# # 0.5 good option
-# sprintf("l: %i", l)
-########################################################################
-########################################################################
-
 
 ########################################################################
 ## Calculate probability of success for observations in test set
