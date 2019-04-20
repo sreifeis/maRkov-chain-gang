@@ -31,7 +31,7 @@ y = rbinom(n, 1, prob)
 # Find maximum possible lambda. At this value, B vector = 0
 
 library(stats) # For 'glm'
-library(stats4) # For BIC calculation
+
 fit = glm(y ~ 1, family = "binomial")
 # Extract intercept
 int = fit$coefficients
@@ -58,6 +58,8 @@ log_lam = seq(from = log(lambda_max), to = log(lambda_min), by = -0.05)
 lambda = exp(log_lam)
 
 ###################################################
+
+
 
 ## Source Nate's cpp code -- SAR added 
 library(Rcpp)
