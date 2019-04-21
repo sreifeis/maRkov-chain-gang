@@ -74,7 +74,7 @@ int = fit$coefficients
 B_test = c(int, numeric((ncol(X.train) - 1)))
 
 prob = exp(int) / (1 + exp(int))
-prob.vec <- rep(prob, num.train)
+prob.vec <- rep(prob, num.train)  # SAR: I think this line is not used
 
 # Find lambda_max
 W = prob*(1-prob)  # Weight matrix when B = 0 (other than intercept)
@@ -105,7 +105,7 @@ library(staRz)
 ## Run Lasso using R wrapper function from staRz
 
 # Update data matrices
-X.trian <- as.matrix(X.train)
+X.train <- as.matrix(X.train)
 # Specify initial B = 0 (due to first lambda = maximum lambda)
 B.pkg = numeric(length = ncol(X.train))
 # Initialize list that will store the B vectors for each lambda
@@ -180,3 +180,4 @@ test.conf.mat <- conf.mat.fun( y.test, test.probs, .5 )
 test.conf.mat
 mcer.test <- (test.conf.mat[1,2] + test.conf.mat[2,1]) / length(y.test)
 mcer.test
+
