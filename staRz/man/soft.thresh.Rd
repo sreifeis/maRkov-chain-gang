@@ -7,17 +7,14 @@
 soft.thresh(z, lambda)
 }
 \arguments{
-\item{z}{description}
+\item{z}{numeric value}
 
-\item{lambda}{description}
+\item{lambda}{numeric value of the penalty coefficient}
 }
 \value{
 a scalar value
 }
 \description{
-This function does...
-}
-\examples{
-give examples
-
+This function produces a soft threshold value to be used in the LASSO function 
+to compute the updated vector of parameter estimates.
 }
