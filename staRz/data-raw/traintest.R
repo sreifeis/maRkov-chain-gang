@@ -6,7 +6,7 @@
 library(usethis)
 library(readr)
 
-dat <- read_csv("merged.csv")
+dat <- read_csv("data-raw/merged.csv")
 
 ##########################
 ## Read in and set up data
@@ -70,9 +70,9 @@ for(j in 2:dim(X.train0)[2]){
 #############################################################
 ## Combine X.train, y.train, X.test, and y.test to one dset
 #############################################################
-all.train <- cbind(X.train, y.train)
-all.test <- cbind(X.test, y.test)
+train <- cbind(X.train, y.train)
+test <- cbind(X.test, y.test)
 
-save(all.train, file = "data/all.train.Rdata")
-save(all.test, file = "data/all.test.Rdata")
+save(train, file = "data/train.RData")
+save(test, file = "data/test.RData")
 
