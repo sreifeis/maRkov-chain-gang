@@ -63,6 +63,13 @@ for(j in 2:dim(X.train0)[2]){
 #############################################################
 ## Find maximum possible lambda. At this value, B vector = 0
 #############################################################
+# Data from package:
+
+X.train = train[,-33]
+y.train = train[,33]
+X.test = test[,-33]
+y.test = test[,33]
+num.train = nrow(X.train)
 
 library(stats) # For 'glm'
 # Update "staRz_0.0.1.tar.gz" using "Tools" every time package is updated
@@ -139,6 +146,11 @@ time.stop - time.start
 ## Results
 which.min(bic.pkg[-1]) # smallest BIC
 beta.coefs <- results.pkg[[which.min(bic.pkg[-1])]]
+
+colnames(train)
+rownames(beta.coefs) = c("Intercept",colnames(train)[-c(1,33)])
+
+write.table(beta.coefs, file = "Lasso Beta Coefficients.csv", sep = ",")
 
 ########################################################################
 ## Calculate probability of success for observations in test set
