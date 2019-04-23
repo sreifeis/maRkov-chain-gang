@@ -33,9 +33,14 @@ devtools::test("staRz")
 ## Creating new tarball
 build("staRz")
 
+## Try installing tarball
+install.packages("staRz_0.0.2.tar.gz", repos = NULL, type="source")
+
 ## Checking:
 setwd("~/SP19/BIOS 735/maRkov-chain-gang/staRz/tests")
 check(manual=TRUE) # error: 'package can't be installed' -- not worrying about this
+
+
 
 ## Notes:
 # No tests for soft_thresh

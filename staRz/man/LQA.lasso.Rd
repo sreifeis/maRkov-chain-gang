@@ -7,25 +7,22 @@
 LQA.lasso(X, Y, beta_start, lambda, tol, max_it)
 }
 \arguments{
-\item{X}{description}
+\item{X}{design matrix with an intercept column and numeric variables that have been centered and scaled}
 
-\item{Y}{description}
+\item{Y}{vector of binary outcomes taking values 0 and 1}
 
-\item{beta_start}{description}
+\item{beta_start}{vector of starting values for the parameters, should have length equal to number of columns in X}
 
-\item{lambda}{description}
+\item{lambda}{scalar value of the penalty coefficient}
 
-\item{tol}{description}
+\item{tol}{desired tolerance level for convergence criteria}
 
-\item{max_it}{description}
+\item{max_it}{maximum number of iterations}
 }
 \value{
-a vector of parameters beta_tilde
+a vector of parameter estimates beta_tilde, with length equal to the number of columns in X
 }
 \description{
-This function does...
-}
-\examples{
-give examples
-
+This function performs LASSO regression given a design matrix, an outcome vector,
+starting values for the regression parameters, and a penalty coefficient.
 }

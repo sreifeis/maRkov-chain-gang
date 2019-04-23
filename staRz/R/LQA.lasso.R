@@ -1,18 +1,16 @@
 #' LQA Lasso
 #'
-#' This function does...
+#' This function performs LASSO regression given a design matrix, an outcome vector,
+#' starting values for the regression parameters, and a penalty coefficient.
 #' 
-#' @param X description
-#' @param Y description
-#' @param beta_start description
-#' @param lambda description
-#' @param tol description
-#' @param max_it description
+#' @param X design matrix with an intercept column and numeric variables that have been centered and scaled
+#' @param Y vector of binary outcomes taking values 0 and 1
+#' @param beta_start vector of starting values for the parameters, should have length equal to number of columns in X
+#' @param lambda scalar value of the penalty coefficient
+#' @param tol desired tolerance level for convergence criteria
+#' @param max_it maximum number of iterations
 #' 
-#' @return a vector of parameters beta_tilde
-#' 
-#' @examples 
-#' give examples
+#' @return a vector of parameter estimates beta_tilde, with length equal to the number of columns in X
 #' 
 #' @useDynLib staRz, .registration = TRUE
 #' @importFrom Rcpp sourceCpp

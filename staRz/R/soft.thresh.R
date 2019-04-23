@@ -1,14 +1,13 @@
 #' Soft Threshold
 #'
-#' This function does...
+#' This function produces a soft threshold value to be used in the LASSO function 
+#' to compute the updated vector of parameter estimates. 
 #' 
-#' @param z description
-#' @param lambda description
+#' @param z numeric value
+#' @param lambda numeric value of the penalty coefficient
 #' 
 #' @return a scalar value
 #' 
-#' @examples 
-#' give examples
 #'
 #' @export
 soft.thresh <- function(z, lambda){
