@@ -1,7 +1,7 @@
 ## HIL: code copied and slightly modified from 'Set-up Code - Runs Nate Lasso - pkg.R'
 
 # Read in merged data
-setwd("/Users/nathanbean/Documents/Spring 2019/BIOS 735/Final Project")
+# setwd("/Your/Own/WorkingDirectory")
 dat <- read.csv("merged.csv")
 dat <- dat[ complete.cases(dat), ]
 
