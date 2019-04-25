@@ -1,0 +1,301 @@
+---
+title: "Final Project Summary: A staRz is Born"
+author: "Brady Nifong, Ethan Alt, Hillary Heiling, Nate Bean, Sarah Reifeis"
+date: "April 25, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\usepackage{amsmath}
+
+```{r}
+library(staRz)
+```
+
+## Introduction to Our Data
+
+### Raw Data
+We found the dataset that inspired our project on Kaggle, titled [Consumer Reviews of Amazon Products](https://www.kaggle.com/datafiniti/consumer-reviews-of-amazon-products). This dataset contains 34,660 reviews of Amazon products such as the Kindle, Fire TV Stick, etc. across multiple different stores (e.g., Amazon, Best Buy). In particular, the variables of interest in this dataset are the number of stars the product received from each reviewer, the title of each review, and the text of each review. 
+
+All variables that were used to build our models needed to be derived from this dataset, so we spend some time in the following sections describing the approaches we took to juicing useful information out of this raw data.
+
+### Variable Creation
+
+The dataset contained two text variables we were interested in - reviews.text and reviews.title. The two variables themselves contain a wealth of information but not in a useful format, so instead we had to mine them to get useful data. Below we discuss further how we decided to derive both "human-made" and "machine-made" variables from the raw text of the Amazon reviews.
+
+#### "Human-Made" Variables
+
+For each of the text variables, we were interested in word count, proportion of positive words and proportion of negative words. We wrote functions to create these variables, as well as the redundant variables positive word count and negative word count. 
+
+Before we could create the variables, we had to clean reviews.text and reviews.title so that we could properly match the words in the text variables to positive and negative sentiments. To do this, we called the `cleanSentence` function, which converts the sentence to a character in case it is of variable type factor, then it makes the sentence lower case, and finally it removes all punctuation from the sentence. 
+
+Once the sentence is clean, we use the ngram function `wordcount` to get the number of words in each sentence. Next we use our function `getSentCount` to create a vector of words in the sentence. From there we count the number of words in the sentence that are positive and the number that are negative. We also calculate the proportion of positive words and proportion of negative words.
+
+The function `getCountData` is then used as a wrapper for all of the above functions, as well as the functions that retrieve the positive (`getPos`) and negative words (`getNeg`). 
+
+```{r, echo = FALSE}
+clean_reviews <- read.csv("C:/Users/sreifeis/Documents/SP19/BIOS 735/maRkov-chain-gang/staRz/data-raw/merged.csv",header=T)
+```
+
+We also dichotomized the review.rating variable - which had values NA, 1, 2, 3, 4, 5 in order to use logistic regression. Values of 1,2,3 were dichomotmized to 0 and values of 4,5 were dichotomized to 1 using the function `dichotomizeStarz`. Note that `dichotomizeStarz` only takes in non-missing values, as we used the function after getting rid of all missing values.
+
+```{r}
+clean_reviews$binary_rating <- rep(NA, length(clean_reviews$reviews.rating))
+
+missing_rate <- which(is.na(clean_reviews$reviews.rating))
+
+clean_reviews$binary_rating[-missing_rate] <- dichotomizeStarz(clean_reviews$reviews.rating[-missing_rate])
+```
+
+#### Investigating the Human-Made Variables
+
+We see below that a large number of observations don't have any negative words for reviews.title or reviews.text. However, this makes some logical sense because over 90% of the observations are rated 1 (i.e. 4 or 5 stars), and we would expect higher ratings to have little to no negative words. 
+
+It may be important to note that the distribution of word count for reviews.text and reviews.title is highly skewed - however, before LASSO we scaled and centered the data so that should help with reducing the skew some.
+
+We chose to use positive/negative proportion rather than count because, as stated above, some reviews have more words than others, and those reviews are more likely to have more positive/negative words simply because they have more words. Using proportion allowed us to compare the negative/positive content between different reviews on the same scale.
+
+```{r}
+## Summary for the review.text variables
+summary(clean_reviews$text_word_ct)
+summary(clean_reviews$text_pos_prop)
+sum(clean_reviews$text_pos_ct == 0 & !is.na(clean_reviews$text_pos_ct))/(sum(!is.na(clean_reviews$text_pos_ct)))
+summary(clean_reviews$text_neg_prop)
+sum(clean_reviews$text_neg_ct == 0 & !is.na(clean_reviews$text_neg_ct))/(sum(!is.na(clean_reviews$text_neg_ct)))
+
+## Summary for the review.title variables
+summary(clean_reviews$title_word_ct)
+summary(clean_reviews$title_pos_prop)
+sum(clean_reviews$title_pos_ct == 0 & !is.na(clean_reviews$title_pos_ct))/(sum(!is.na(clean_reviews$title_pos_ct)))
+summary(clean_reviews$title_neg_prop)
+sum(clean_reviews$title_neg_ct == 0 & !is.na(clean_reviews$title_neg_ct))/(sum(!is.na(clean_reviews$title_neg_ct)))
+
+denom <- sum(table(clean_reviews$binary_rating))
+table(clean_reviews$binary_rating)/denom
+```
+
+#### "Machine-Made" Variables
+
+Several data-cleaning tasks were necessary before applying LDA to our chosen dataset. First, all words in the reviews were changed to lowercase. This is because sometimes people might mistakenly capitalize some letters incorrectly and `R` is a case-sensitive language. Moreover, punctuation was removed from the data. For example, the word *don't* was changed to *dont*. This is because some reviewers may have not added the apostrophe and because R would interpret end of sentence words as distinct from middle of sentence words, since end of sentence words would have a period included.
+
+Various *stop words* were defined. These stop words are words that get removed from the data. We removed product-specific words so that sentiment could be better captured and the topics would not be too influenced by the products. We also removed some words that could be irrelevant to sentiment. 
+
+The stop words were: "amazon", "alexa", "echo", "tablet", "kindle", "fire", "alexia", "read", "reading", "ipad", "husband", "son", "daughter", "kids", "kid".
+
+After performing this data-cleaning we derived our "machine-made" variables using Latent Dirichlet Allocation, which will be discussed in detail in the Methods section. If you're interested in the code for pre-processing these variables and running the LDA, please see *data_cleaning_ea.R* in our [GitHub final project repository](https://github.com/sreifeis/maRkov-chain-gang). Ultimately, we used LDA to create 5 variables from the titles of the reviews and 20 variables from the text of the reviews.
+
+### Missing Data
+
+Once we created all necessary variables, we realized we had some missing values. Specifically, 1,261 of the observations (about 3.6%) had a missing value for number of stars or had at least one derived covariate that was missing. Since this is such a small portion of the overall dataset, we decided to delete these observations and do a complete case analysis. Once these missing observations were removed, we were left with 33,399 observations which were allocated in a 1:1 ratio to the training and test sets for use in our models. 
+
+### Packaging
+
+Our R package `staRz` contains the following functions and datasets:
+
+* Functions for human-created variables
+    + `cleanSentence`
+    + `dichotomizeStarz`
+    + `getCountData`
+    + `getNeg`
+    + `getPos`
+    + `getSentCount`
+* LASSO functions
+    + `LQA.lasso`
+    + `soft.thresh`
+* Datasets
+    + `test`
+    + `train`
+
+The `test` and `train` datasets each contain a randomly sampled 50% of the complete case data.
+```{r}
+dim(test)
+dim(train)
+```
+
+Both datasets contain the design matrix (1 intercept column & 31 derived variables) and the outcome vector for use in the `LQA.lasso` function. The 31 derived variables in these datasets have already been centered and scaled (both with the means and standard deviations from the training set) and are ready for use in model fitting.
+
+All functions have documentation describing their inputs and a basic description of the task they perform, as well as the output they generate; the functions each have some built-in tests as well to verify that the user-supplied inputs are in the proper form and for some functions the output is tested to confirm the returned result is as expected. The datasets are also documented in the package with descriptions of the structure and the variables they contain.  
+
+## Methods
+
+### Latent Dirichlet Allocation (LDA)
+
+Latent Dirichlet Allocation (LDA) is a natural language processing (NLP) technique used to model words in documents. LDA assumes that words are generated from a mixture model of latent topics. The number of topics is assumed to be known in advance. The distribution of topics is assumed to have a sparse Dirichlet prior, which gives the intuition that documents cover only a subset of topics. In addition, it encodes the assumption that topics consist of only a few words from a vocabulary.
+
+#### Model
+
+LDA assumes the followikng process for a corpus $D$ consisting of $M$ documents with $K$ topics and $N_i$ words for each document:
+
+1. Choose $\theta_i \sim \text{Dir} (\alpha)$ where $i \in \{1, 2, \ldots, M$ and $\alpha$ is typically sparse.
+
+2. Choose $\phi_k \sim \text{Dir}(\beta)$, where $k \in \{1, 2, \ldots, K \}$ and $\beta$ is typically sparse.
+
+3. For each word position $i \in \{1, 2, \ldots, M \}$, $j \in \{1, 2, \ldots, N_i \}$
+
+  + Choose a topic $z_{ij} \sim \text{Multinomial}(\theta_i)$
+    
+  + Choose a word $w_{ij} \sim \text{Multinomial}(\phi_{z_{ij}})$
+
+Since the topics are latent, the model is solved by variational Bayes. Other solutions exist, including Gibbs Sampling and Expectation Propagation, but we used variational Bayes in order to speed up the process.
+
+#### Specifics of Our LDA
+
+We assumed that we had 20 topics for the review text and 5 topics for the title text. The `R` package topicmodels contains a function `LDA` that runs the model. We left all options as defaults, which corresponds to estimating the $\alpha$ and $\beta$ parameters. The posterior means of the topics across the documents were utilized in order to reduce the dimensionality of the data, and were utilized as predictors in the logistic regression models. 
+
+Note that the probabilities of the 20 review text topics all sum to 1, and the same is true for the 5 title text topics. Including all of these as candidate variables in the models would cause a linear dependence issue. Our solution was to logit-transform these probabilities, allowing us to keep them all as candidate variables for the models. 
+
+
+### LQA LASSO Algorithm
+
+In this project, we used penalized logistic regression to chose a prediction model. In this penalized logistic regression, the estimates $\hat\beta$ were found by minimizing the following:
+
+$$ \hat \beta = argmin_\beta \space \left (-\frac{1}{n}\ell(\beta) + \lambda \sum_{j=1}^p |\beta_j| \right) $$
+
+where $\ell(\beta) = \sum_{i=1}^n \ell_i(\beta)$ is the log likelihood for the model and $\beta_j$ is the coefficient parameter associated with the jth covariate. 
+
+Note: This minimization was achieved through coordinate descent (detailed later). In coordinate descent, we solve for the new estimate of $\beta_j$ by assuming that all other $\beta_k$ for $k \ne j$ is fixed at their last updated values, i.e. the "current" values of $\beta_k$. (This algorithm will be discussed on more detail later).
+
+In order to simplify this minimization problem, we first approximated $\ell(\beta)$ using a second order Taylor series expansion--the local quadratic approximation (LQA)--about $x_i \tilde \beta$ where $x_i = [x_{i1},...,x_{ip}]$ is the 1xp row vector of covariate values for individual i and $\tilde \beta$ is the current value (i.e. last updated value) of the $\beta = [\beta_1, ..., \beta_p]^T$ px1 vector of coefficients associated with each of the p covariates. The covariates $x_{ij}$ are scaled so that $\sum_{i=1}^n x_{ij} = 0$ and $\sum_{i=1}^n x_{ij}^2 = 1$ (each covariate is scaled so that mean = 0 and variance = 1). The local quadratic approximation is detailed below:
+
+$$ \ell_i(\beta) \approx \ell_i(\tilde \beta) + \ell_i'(\tilde \beta)(x_i\beta - x_i\tilde\beta) +
+\ell_i''(\tilde\beta) (x_i\beta - x_i\tilde\beta)^2 $$
+
+where
+
+$$ \ell_i(\beta) = y_i(x_i\beta) - log(1 + exp(x_i\beta)) $$
+$$ \ell_i'(\beta) = \frac{\partial}{\partial(x_i\beta)} \ell_i(\beta) = y_i - \frac{exp(x_i\beta)}{1 + exp(x_i\beta)}  $$
+and
+
+$$ \ell_i''(\beta) = \frac{\partial}{\partial(x_i\beta)} \ell_i'(\beta) = \left(\frac{exp(x_i\beta)}{1 + exp(x_i\beta)} \right)^2 - \frac{exp(x_i\beta)}{1 + exp(x_i\beta)} = -p(x_i)(1 - p(x_i)) $$
+
+where 
+
+$$p(x_i) = \frac{exp(x_i\beta)}{1 + exp(x_i\beta)}$$
+
+In later calculations that include $\tilde\beta$ we will denote,
+
+$$ \tilde p(x_i) = \frac{exp(x_i\tilde\beta)}{1 + exp(x_i\tilde\beta)} $$
+
+Using a complete-the-square approach, we can approximate $\ell_i(\beta)$ as follows:
+
+$$ \ell_i(\beta) \approx -\frac{1}{2} \tilde p(x_i)(1-\tilde p(x_i))\left(\frac{y_i - \tilde p(x_i)}{\tilde p(x_i)(1-\tilde p(x_i))} + x_i\tilde\beta - x_i\beta \right)^2 $$
+
+Then,
+
+$$ \ell(\beta) \approx -\frac{1}{2} \sum_{i=1}^n \tilde p(x_i)(1-\tilde p(x_i))\left(\frac{y_i - \tilde p(x_i)}{\tilde p(x_i)(1-\tilde p(x_i))} + x_i\tilde\beta - x_i\beta \right)^2 + c(\tilde\beta) $$
+
+where $c(\tilde\beta)$ is some constant that may depend on the data and $\tilde\beta$, but does not depend on $\beta$. Since the partial derivatives (detailed later) taken with respect to $\beta_j$ of this constant term will be zero, this constant term can be ignored.
+
+For notational convenience we can re-write some of the above terms as follows:
+
+The weight $w_i$:
+
+$$ w_i = \tilde p(x_i)(1-\tilde p(x_i)) $$
+The working response $\tilde y_i$:
+
+$$ \tilde y_i = \frac{y_i - \tilde p(x_i)}{\tilde p(x_i)(1-\tilde p(x_i))} + x_i\tilde\beta $$
+
+Consequently, the $\hat \beta$ solution of interest minimizes the following:
+
+$$ \hat \beta = argmin_\beta \space \frac{1}{2n} \sum_{i=1}^n w_i (\tilde y_i - x_i\beta)^2 + \lambda \sum_{j=1}^p |\beta_j| $$
+
+#### Coordinate Descent Algorithm (for LASSO)
+
+1. **Outer Loop**: Loop over the range of potential $\lambda$ from $\lambda_{max}$ to $\lambda_{min}$ (where $\lambda$ values are equally spaced on the log-scale). For notational purposes, let $\lambda^s$ equal the $s^{th}$ $\lambda$ in the sequence. 
+
+  + If $\lambda = \lambda_{max} = \lambda^0$, set the initial values of $\beta^{(0)}$ to be 0 for all covariates.
+  
+  + For each following $\lambda^s$ value (s > 0) in the sequence, use the previous $\beta$ solution from $\lambda^{s-1}$ as the initial values of $\beta$.
+    
+    2. **Middle Loop**: For each iteration t, Set the "current" values of $\tilde\beta$ to $\beta^{(t-1)}$, the latest updated $\beta$ values found in the previous iteration.
+    
+        **Inner Loop**: For j = 1,...,p
+        
+        A. Update $\beta_j$ by (a) fixing all other $\beta_k$ for $k \ne j$ to be equal to $\tilde\beta_k$, the $\beta_k$ value from the "current" values of $\tilde\beta$ and then (b) solving the minimization problem for $\beta_j$ (described later).
+        
+        B. Update $\tilde\beta_j$ to equal the newly found $\hat \beta_j$
+    
+    3. Once each $\beta_j$ is updated for j=1,...,p, let the new updated version of $\beta$ equal $\beta^{(t)}$. 
+    
+    4. Check if $||\beta^{(t)} - \beta^{(t-1)}|| < \epsilon$ for some small tolerance level $\epsilon$. If true, then stop. If false, then go back to "Middle Loop" and repeat steps 2 - 4 until convergence.
+  
+To update each $\hat \beta_j$, we note the following:
+
+$$ \frac{\partial}{\partial\beta_j} \left ( \frac{1}{2n} \sum_{i=1}^n w_i (\tilde y_i - x_i\beta )^2 + \lambda \sum_{j=1}^p |\beta_j| \right ) $$ 
+
+$$ = \frac{\partial}{\partial \beta_j} \left ( \frac{1}{2n} \sum_{i=1}^n w_i (\tilde y_i - x_{i-j}\tilde\beta_{-j} - x_{ij}\beta_j )^2 \right ) + \lambda \partial(|\beta_j|) $$
+where $\partial(|\beta_j|)$ is the subdifferential of $|\beta_j|$, $x_{i-j}$ is the covariate vector $x_i$ without the jth covariate, and $\beta_{-j}$ is the $\beta$ vector without the jth coefficient parameter.
+
+$$ = -\frac{1}{n} \sum_{i=1}^n w_i x_{ij} (\tilde y_i - x_{i-j}\tilde\beta_{-j}) + \frac{1}{n} \sum_{i=1}^n w_i x_{ij}^2 \beta_j + \lambda \partial(|\beta_j|) $$
+
+$$ = -z_j + v_j \beta_j + \lambda \partial(|\beta_j|) $$
+
+where
+
+$$ z_j = \frac{1}{n} \sum_{i=1}^n w_i x_{ij} (\tilde y_i - x_{i-j}\tilde\beta_{-j}) $$
+
+$$ v_j = \frac{1}{n} \sum_{i=1}^n w_i x_{ij}^2 $$
+
+Solving for $\beta_j$, we get the following closed-form solution:
+
+$$ \hat \beta_j = \frac{S(z_j,\lambda)}{v_j} = \frac{sign(z_j)(|z_j| - \lambda)_+}{v_j} =  \begin{cases}
+  \frac{z_j - \lambda}{v_j} & \text{if } z_j > 0 \text{ and } \lambda < |z_j| \\
+  \frac{z_j + \lambda}{v_j} & \text{if } z_j < 0 \text{ and } \lambda < |z_j| \\
+  0 & \text{if } \lambda \ge |z_j|
+\end{cases} $$
+
+To find $\lambda_{max}$, the smallest value of $\lambda$ such that all of the penalized coefficients are 0, we can see that $\lambda_{max}$ will equal $max_j {z_j}$ where the $\tilde\beta$ values are determined by an intercept-only model. We will define $\lambda_{min} = \lambda_{max} \epsilon$ for some small value of $\epsilon > 0$.
+
+The paper by Breheny and Huang (2011) specifies how to find $\lambda_{max}$ when we are including an intercept in the model. First, an intercept-only model (using some standard maximization tool) is fit to the data. Then, we set $\tilde\beta = [\beta_0, 0, ..., 0]$ where $\beta_0$ is the intercept from the fit model. We use this $\tilde\beta$ to calculate $z_j$ (expression given above) for all j. Then, $\lambda_{max} = max_j|z_j|$.
+
+The "best" $\lambda$ will be the $\lambda$ with the lowest extended BIC (Chen & Chen, 2008). The extended BIC is as follows:
+
+$$ EBIC_\lambda = -2 \ell(\hat\beta(s,\lambda)) + s_\lambda log(n) + 2 s_\lambda \gamma log(P) $$
+
+where $s_\lambda$ is the number of covariates not penalized to zero during the LASSO coordinate descent algorithm for a particular value of $\lambda$, n is the number of observations, P is the number of original covariates, $\gamma$ is some constant between 0 and 1 (in this case, 0.5 from recommendations from Chen & Chen), and $\hat\beta(s_\lambda)$ is the calculated $\beta$ values after the penalized LASSO regression procedure at the specified value of $\lambda$. Note that if we were to set $\gamma = 0$, this would reduce to the usual BIC (i.e. this extended BIC - EBIC - adds an additional penalty to the usual BIC). According to Chen & Chen (2008), this EBIC performs better in high dimensional settings (e.g. it reduceds the false discovery rate (FDR)).
+
+Once the best $\lambda$ is found, then the final $\beta$ we will use for the model will be the $\beta$ calculated during the coordinate descent algorithm at this value of $\lambda$. 
+
+
+## Results
+
+We can use the training data `train` from our `staRz` package as input to the `LQA.lasso` function.
+```{r}
+X.train <- train[, -33]
+y.train <- train[, 33]
+```
+
+## Discussion
+
+### Limitations
+
+There were several limitations to our project. Most came down to our created variables (machine- and human-made) and the amount of time we had.
+
+#### LDA
+
+LDA assumes number of topics is fixed and known in advance. We may have chosen the wrong number of topics for reviews.text or reviews.title. For simplicity of this project, we decided to look at 20 topics for reviews.text and 5 topics for reviews.title, but it probably would have been good for us to look at a variety of choices.
+
+Another issue is that we used a unigram model in which only one word can go in a topic. This does not account for reviews such as “this product is not good” or “I don’t hate this product”, in which "not good" should be deemed negative and "don't hate" should be deemed positive. If we had more time, we could have tried a bi-gram, or even an N-gram model but this increases computational complexity. Another option would be to use HMM-LDA.
+
+#### Human-Made Variables
+
+For creating the positive and negative variables, one issue is that sentiment does not account for sentence context. For example, in the sentence "the miniature zen garden helped me to slow down and relax”, slow should be considered a positive word based on the product, but it is considered a negative word by our function. One way we could fix this is by defining the vector of positive and negative words based on the product itself.
+
+Another issue in creating the reviews.title and reviews.text related variables is that they do not
+not account for spelling or typing errors. For examples, in the sentece “simply does everything I need. Thank youAnd silk works wonders”, "youAnd" would be considered one word instead of two.
+
+The human-made review variables are inherently related to the LDA topics, we just don't know how they are related. This could have been why our LASSO model got rid of all of the LDA topics. If we only included the LDA topics as covariates, more of them may have been included in the final model.
+
+Lastly, our data may not be the most representative as a large majority of our observations (90+%) have a dichotomized rating of 1. This is likely why we had so many observations that did not have any negative words in the reviews.title or reviews.text. If we had more time, we should have looked for other products with a lower average rating to analyze (ie 3.5, 2.7), or products that had a better balance of ratings.
+
+Alternatively, we could have dichotomized ratings differetly. We see below that over 68% of the observations have a rating of 5. It might have been better if we dichotomized the ratings so that a rating of 5 would get a value of 1 and all others get a value of 0. If we had done this, our data would have been more balanced and our results may have been better.
+
+```{r}
+round(table(clean_reviews$reviews.rating)/denom,3)
+```
+
+
+
