@@ -452,7 +452,6 @@ time.stop <- Sys.time()
 time.stop - time.start
 
 # glmnet results using best lambda = 0.0013
-time.stop - time.start
 best.lambda.glmnet
 glmnet.coefs <- coef(glmmod)[ , glmmod$lambda == best.lambda.glmnet ]
 
