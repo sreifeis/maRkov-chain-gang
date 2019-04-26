@@ -158,7 +158,7 @@ $$ \hat \beta = argmin_\beta \space \left (-\frac{1}{n}\ell(\beta) + \lambda \su
 
 where $\ell(\beta) = \sum_{i=1}^n \ell_i(\beta)$ is the log likelihood for the model and $\beta_j$ is the coefficient parameter associated with the jth covariate. 
 
-Note: This minimization was achieved through coordinate descent (detailed later). In coordinate descent, we solve for the new estimate of $\beta_j$ by assuming that all other $\beta_k$ for $k \ne j$ are fixed at their last updated values; i.e., the "current" values of $\beta_k$. (This algorithm will be discussed in more detail later).
+Note: This minimization was achieved through coordinate descent. In coordinate descent, we solve for the new estimate of $\beta_j$ by assuming that all other $\beta_k$ for $k \ne j$ are fixed at their last updated values; i.e., the "current" values of $\beta_k$. (This algorithm will be discussed in more detail later).
 
 In order to simplify this minimization problem, we first approximated $\ell(\beta)$ using a second order Taylor series expansion---the local quadratic approximation (LQA)---about $x_i \tilde \beta$ where $x_i = [x_{i1},...,x_{ip}]$ is the $1 \times p$ row vector of covariate values for individual $i$ and $\tilde \beta$ is the current value (i.e., last updated value) of the $\beta = [\beta_1, ..., \beta_p]^T$ $p \times 1$ vector of coefficients associated with each of the $p$ covariates. The covariates $x_{ij}$ are scaled so that $\sum_{i=1}^n x_{ij} = 0$ and $\sum_{i=1}^n x_{ij}^2 = 1$ (mean = 0 and variance = 1 for each covariate). The local quadratic approximation is detailed below:
 
@@ -177,21 +177,21 @@ where
 
 $$p(x_i) = \frac{exp(x_i\beta)}{1 + exp(x_i\beta)}.$$
 
-In later calculations that include $\tilde\beta$ we will denote,
+In later calculations that include $\tilde\beta$, we will denote
 
 $$ \tilde p(x_i) = \frac{exp(x_i\tilde\beta)}{1 + exp(x_i\tilde\beta)}. $$
 
 Using a complete-the-square approach, we can approximate $\ell_i(\beta)$ as follows:
 
-$$ \ell_i(\beta) \approx -\frac{1}{2} \tilde p(x_i)(1-\tilde p(x_i))\left(\frac{y_i - \tilde p(x_i)}{\tilde p(x_i)(1-\tilde p(x_i))} + x_i\tilde\beta - x_i\beta \right)^2. $$
-
-Then,
-
-$$ \ell(\beta) \approx -\frac{1}{2} \sum_{i=1}^n \tilde p(x_i)(1-\tilde p(x_i))\left(\frac{y_i - \tilde p(x_i)}{\tilde p(x_i)(1-\tilde p(x_i))} + x_i\tilde\beta - x_i\beta \right)^2 + c(\tilde\beta) $$
+$$ \ell_i(\beta) \approx -\frac{1}{2} \tilde p(x_i)(1-\tilde p(x_i))\left(\frac{y_i - \tilde p(x_i)}{\tilde p(x_i)(1-\tilde p(x_i))} + x_i\tilde\beta - x_i\beta \right)^2 + c(\tilde\beta) $$
 
 where $c(\tilde\beta)$ is some constant that may depend on the data and $\tilde\beta$, but does not depend on $\beta$. Since the partial derivatives (detailed later) taken with respect to $\beta_j$ of this constant term will be zero, this constant term can be ignored.
 
-For notational convenience we can re-write some of the above terms as follows:
+Consequently, minimizing the negative log likelihood is equivalent to minimizing the following:
+
+$$ -\ell(\beta) \approx \frac{1}{2} \sum_{i=1}^n \tilde p(x_i)(1-\tilde p(x_i))\left(\frac{y_i - \tilde p(x_i)}{\tilde p(x_i)(1-\tilde p(x_i))} + x_i\tilde\beta - x_i\beta \right)^2 $$
+
+For notational convenience we can re-express some of the above terms as follows:
 
 The weight $w_i$:
 
@@ -203,6 +203,8 @@ $$ \tilde y_i = \frac{y_i - \tilde p(x_i)}{\tilde p(x_i)(1-\tilde p(x_i))} + x_i
 Consequently, the $\hat \beta$ solution of interest minimizes the following:
 
 $$ \hat \beta = argmin_\beta \space \frac{1}{2n} \sum_{i=1}^n w_i (\tilde y_i - x_i\beta)^2 + \lambda \sum_{j=1}^p |\beta_j|. $$
+
+After going through all of the above steps, we have now redefined the original minimization problem as the minimization of a penalized weighted least squares problem.
 
 #### Coordinate Descent Algorithm (for LASSO)
 
@@ -229,7 +231,7 @@ To update each $\hat \beta_j$, we note the following:
 $$ \frac{\partial}{\partial\beta_j} \left ( \frac{1}{2n} \sum_{i=1}^n w_i (\tilde y_i - x_i\beta )^2 + \lambda \sum_{j=1}^p |\beta_j| \right ) $$ 
 
 $$ = \frac{\partial}{\partial \beta_j} \left ( \frac{1}{2n} \sum_{i=1}^n w_i (\tilde y_i - x_{i-j}\tilde\beta_{-j} - x_{ij}\beta_j )^2 \right ) + \lambda \partial(|\beta_j|) $$
-where $\partial(|\beta_j|)$ is the subdifferential of $|\beta_j|$, $x_{i-j}$ is the covariate vector $x_i$ without the $j^{th}$ covariate, and $\beta_{-j}$ is the $\beta$ vector without the $j^{th}$ coefficient parameter.
+(where $\partial(|\beta_j|)$ is the subdifferential of $|\beta_j|$, $x_{i-j}$ is the covariate vector $x_i$ without the $j^{th}$ covariate, and $\beta_{-j}$ is the $\beta$ vector without the $j^{th}$ coefficient parameter)
 
 $$ = -\frac{1}{n} \sum_{i=1}^n w_i x_{ij} (\tilde y_i - x_{i-j}\tilde\beta_{-j}) + \frac{1}{n} \sum_{i=1}^n w_i x_{ij}^2 \beta_j + \lambda \partial(|\beta_j|) $$
 
@@ -249,15 +251,13 @@ $$ \hat \beta_j = \frac{S(z_j,\lambda)}{v_j} = \frac{sign(z_j)(|z_j| - \lambda)_
   0 & \text{if } \lambda \ge |z_j|
 \end{cases}. $$
 
-To find $\lambda_{max}$, the smallest value of $\lambda$ such that all of the penalized coefficients are 0, we can see that $\lambda_{max}$ will equal $max_j {z_j}$ where the $\tilde\beta$ values are determined by an intercept-only model. We will define $\lambda_{min} = \lambda_{max} \epsilon$ for some small value of $\epsilon > 0$.
-
-The paper by Breheny and Huang (2011) specifies how to find $\lambda_{max}$ when we are including an intercept in the model. First, an intercept-only model (using some standard maximization tool) is fit to the data. Then, we set $\tilde\beta = [\beta_0, 0, ..., 0]$ where $\beta_0$ is the intercept from the fit model. We use this $\tilde\beta$ to calculate $z_j$ (expression given above) for all j. Then, $\lambda_{max} = max_j|z_j|$.
+The paper by Breheny and Huang (2011) specifies how to find $\lambda_{max}$ when we are including an intercept in the model. First, an intercept-only model (using some standard maximization tool) is fit to the data. Then, we set $\tilde\beta = [\beta_0, 0, ..., 0]$ where $\beta_0$ is the intercept from the fit model. We use this $\tilde\beta$ to calculate $z_j$ (expression given above) for all j. Then, $\lambda_{max} = max_j|z_j|$. We then define $\lambda_{min} = \lambda_{max} \epsilon$ for some small value of $\epsilon > 0$.
 
 The "best" $\lambda$ will be the $\lambda$ with the lowest extended BIC (Chen & Chen, 2008). The extended BIC is as follows:
 
-$$ EBIC_\lambda = -2 \ell(\hat\beta(s,\lambda)) + s_\lambda log(n) + 2 s_\lambda \gamma log(P) $$
+$$ EBIC_\lambda = -2 \ell(\hat\beta(\lambda)) + s_\lambda log(n) + 2 s_\lambda \gamma log(P) $$
 
-where $s_\lambda$ is the number of covariates not penalized to zero during the LASSO coordinate descent algorithm for a particular value of $\lambda$, $n$ is the number of observations, $P$ is the number of original covariates, $\gamma$ is some constant between 0 and 1 (in this case, 0.5 from recommendations from Chen & Chen), and $\hat\beta(s_\lambda)$ is the calculated $\beta$ values after the penalized LASSO regression procedure at the specified value of $\lambda$. Note that if we were to set $\gamma = 0$, this would reduce to the usual BIC (i.e. this extended BIC - EBIC - adds an additional penalty to the usual BIC). According to Chen & Chen (2008), this EBIC performs better in high dimensional settings (e.g., it reduceds the false discovery rate (FDR)).
+where $s_\lambda$ is the number of covariates not penalized to zero during the LASSO coordinate descent algorithm for a particular value of $\lambda$, $n$ is the number of observations, $P$ is the number of original covariates, $\gamma$ is some constant between 0 and 1 (in this case, 0.5 from recommendations from Chen & Chen), and $\hat\beta(\lambda)$ is the calculated $\beta$ values after the penalized LASSO regression procedure at the specified value of $\lambda$. Note that if we were to set $\gamma = 0$, this would reduce to the usual BIC (i.e. this extended BIC - EBIC - adds an additional penalty to the usual BIC). According to Chen & Chen (2008), this EBIC performs better in high dimensional settings (e.g., it reduceds the false discovery rate (FDR)).
 
 Once the best $\lambda$ is found, the final $\beta$ we will use for the model will be the $\beta$ calculated during the coordinate descent algorithm at this value of $\lambda$. 
 
@@ -287,7 +287,7 @@ prob = exp(int) / (1 + exp(int))
 prob.vec <- rep(prob, nrow(train))
 
 # Find lambda_max
-W = prob*(1-prob)  # Weight matrix when B = 0 (other than intercept)
+W = prob*(1-prob)  # Weight when B = 0 (other than intercept)
 y_wr = (y.train - prob) / (prob * (1-prob)) + X.train %*% B_test  # Working response for intercept-only results
 
 lam_option = numeric(ncol(X.train))
@@ -674,7 +674,7 @@ Another issue is that we used a unigram model in which only one word can go in a
 
 #### Human-Made Variables
 
-For creating the positive and negative variables, one issue is that sentiment does not account for sentence context. For example, in the sentence "the miniature zen garden helped me to slow down and relax”, "slow"" should be considered a positive word based on the product, but it is considered a negative word by our function. One way we could fix this is by defining the vector of positive and negative words based on the product itself.
+For creating the positive and negative variables, one issue is that sentiment does not account for sentence context. For example, in the sentence "the miniature zen garden helped me to slow down and relax”, "slow" should be considered a positive word based on the product, but it is considered a negative word by our function. One way we could fix this is by defining the vector of positive and negative words based on the product itself.
 
 Another issue in creating the reviews.title and reviews.text related variables is that they do not
 not account for spelling or typing errors. For examples, in the sentece “simply does everything I need. Thank youAnd silk works wonders”, "youAnd" would be considered one word instead of two.
